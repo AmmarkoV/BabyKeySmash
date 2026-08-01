@@ -78,11 +78,14 @@ adapted from it.
 
 Every `*.png` in `textures/` is loaded at startup and popped on keypresses
 (alpha channel respected, random bright tint applied). Just drop in more art.
-A file whose name contains `trail` is reserved for the mouse trail. The
-bundled placeholders were generated with:
+A file whose name contains `trail` is reserved for the mouse trail; files
+whose name contains `emoji` skip the random tint and keep their original
+colors. The bundled art — hand-drawn placeholder shapes, the Greek alphabet
+and ~64 kid-friendly emoji extracted from the system Noto Color Emoji font
+(each glyph of that font is an embedded PNG) — was generated with:
 
 ```
-python3 tools/make_textures.py     # needs python3-pil , python3-numpy
+python3 tools/make_textures.py     # needs python3-pil , python3-numpy , python3-fonttools
 ```
 
 ### Shaders

@@ -19,12 +19,13 @@
 #include "shadertoy.h"
 
 #define MAX_SPRITES 512
-#define MAX_TEXTURES 64
+#define MAX_TEXTURES 256
 
 struct spriteTexture
 {
   GLuint tex;
   float aspect; /* width / height */
+  int noTint;   /* emoji keep their original colors */
 };
 
 struct sprite
@@ -148,6 +149,7 @@ static int loadTexturesFromDirectory(const char * directory)
        {
          textures[numberOfTextures].tex    = tex;
          textures[numberOfTextures].aspect = aspect;
+         textures[numberOfTextures].noTint = ( files[i].find("emoji")!=cv::String::npos );
          numberOfTextures++;
        }
     fprintf(stderr,"Loaded texture %s \n",files[i].c_str());
@@ -235,6 +237,7 @@ void sprites_spawnRandomTexture(float x,float y)
   int pick = rand()%numberOfTextures;
   spawnCommon(s,x,y,textures[pick].tex,textures[pick].aspect,
               randomFloat(0.18f,0.32f)*screenH,randomFloat(1.8f,2.8f));
+  if (textures[pick].noTint) { s->r=1.0f; s->g=1.0f; s->b=1.0f; }
 }
 
 int sprites_loadGreek(const char * greekDirectory)

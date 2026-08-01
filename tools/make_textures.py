@@ -5,10 +5,12 @@ textures/ . Real kid-friendly art can simply replace these files ; every
 *.png in textures/ is picked up at startup .
 Requires : python3-pil , python3-numpy"""
 
+import io
 import os
 import math
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from fontTools.ttLib import TTFont
 
 SIZE = 256
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "textures")
@@ -105,6 +107,57 @@ def trail_dot():
     save("trail_dot.png", Image.fromarray(arr, "RGBA"))
 
 
+EMOJI_FONT = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
+
+# Curated kid-friendly single-codepoint emoji . Multi-codepoint sequences
+# ( skin tones , ZWJ combos ) are avoided on purpose : single codepoints map
+# directly through the font cmap
+EMOJI = {
+    "dog": "🐶", "cat": "🐱", "mouse": "🐭", "hamster": "🐹", "rabbit": "🐰",
+    "fox": "🦊", "bear": "🐻", "panda": "🐼", "koala": "🐨", "tiger": "🐯",
+    "lion": "🦁", "cow": "🐮", "pig": "🐷", "frog": "🐸", "monkey": "🐵",
+    "chicken": "🐔", "penguin": "🐧", "chick": "🐤", "duck": "🦆", "owl": "🦉",
+    "horse": "🐴", "unicorn": "🦄", "bee": "🐝", "butterfly": "🦋",
+    "snail": "🐌", "ladybug": "🐞", "turtle": "🐢", "octopus": "🐙",
+    "fish": "🐠", "dolphin": "🐬", "whale": "🐳", "elephant": "🐘",
+    "giraffe": "🦒", "dino": "🦕", "trex": "🦖",
+    "car": "🚗", "bus": "🚌", "firetruck": "🚒", "tractor": "🚜",
+    "train": "🚂", "airplane": "✈", "rocket": "🚀", "boat": "⛵",
+    "balloon": "🎈", "ball": "⚽", "rainbow": "🌈", "star": "⭐",
+    "sun": "🌞", "moon": "🌙", "snowflake": "❄", "flower": "🌸",
+    "sunflower": "🌻", "gift": "🎁", "teddy": "🧸", "drum": "🥁",
+    "apple": "🍎", "banana": "🍌", "strawberry": "🍓", "watermelon": "🍉",
+    "icecream": "🍦", "cookie": "🍪", "cake": "🎂", "pizza": "🍕",
+    "heart": "❤",
+}
+
+
+def emoji():
+    # Noto Color Emoji is a CBDT bitmap font : every glyph embeds a ready
+    # 128x128 PNG which is extracted directly , no rendering involved .
+    # Files are named emoji_* : sprites.cpp skips the random tint for them
+    # so their original colors stay intact
+    font = TTFont(EMOJI_FONT)
+    cmap = font.getBestCmap()
+    glyphs = font["CBDT"].strikeData[0]
+    written = 0
+    for name, glyph in EMOJI.items():
+        code = ord(glyph)
+        if code not in cmap:
+            print("skipping", name, "- not in", EMOJI_FONT)
+            continue
+        raw = glyphs[cmap[code]].data
+        png_start = raw.find(b"\x89PNG")
+        if png_start < 0:
+            print("skipping", name, "- no embedded PNG")
+            continue
+        img = Image.open(io.BytesIO(raw[png_start:])).convert("RGBA")
+        img = img.resize((SIZE, SIZE), Image.LANCZOS)
+        save("emoji_%s.png" % name, img)
+        written += 1
+    print("wrote", written, "emoji textures")
+
+
 def greek_letters():
     # cv::putText ( Hershey fonts ) can not render Greek glyphs , so the
     # Greek letters used with --greek are pre-baked here with a TTF font ,
@@ -132,3 +185,4 @@ if __name__ == "__main__":
     dino()
     trail_dot()
     greek_letters()
+    emoji()
