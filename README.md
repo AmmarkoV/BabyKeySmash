@@ -64,6 +64,11 @@ cmake --build build -j$(nproc)
 ./build/babykeysmash
 ```
 
+Or simply `./run.sh` (builds if needed, forwards arguments like `--greek`).
+To install system-wide — binary to `/usr/bin/babykeysmash`, assets to
+`/usr/share/babykeysmash` — run `sudo ./install.sh`; remove everything again
+with `./uninstall.sh`. See [INSTALL](INSTALL) for details.
+
 The executable can be started from any directory — if `shaders/` is not found
 in the current directory it falls back to the source tree.
 
@@ -111,3 +116,8 @@ bit to disable them.
 ## Author
 
 Ammar Qammaz (AmmarkoV)
+
+## License
+
+GPL-3.0 — see [LICENSE](LICENSE). Emoji textures are extracted from Google's
+Noto Color Emoji font (SIL Open Font License 1.1).

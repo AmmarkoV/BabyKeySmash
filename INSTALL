@@ -1,0 +1,48 @@
+--------------- Library Dependencies ---------------
+BabyKeySmash targets Ubuntu 22.04 / 24.04+ systems , you can get the
+required packages with :
+
+sudo apt install cmake g++ libx11-dev libglew-dev libopencv-dev libasound2-dev libvorbis-dev
+
+The optional asset regeneration tools ( tools/make_textures.py ,
+tools/import_sounds.sh ) additionally use :
+
+sudo apt install python3-pil python3-numpy fonttools ffmpeg
+
+
+--------------- Compilation ---------------
+To compile the project open a terminal , cd to the root of the project and run
+
+cmake -S . -B build
+cmake --build build -j$(nproc)
+
+You can then try the application without installing anything using
+
+./run.sh              ( or ./run.sh --greek for Greek letters )
+
+
+--------------- Installation of current version ---------------
+If you want to install the app ( it compiles automatically ) , run
+
+sudo ./install.sh
+
+your password is required..
+
+This installs the babykeysmash binary to /usr/bin and the assets
+( shaders , textures , sounds , hook scripts ) to /usr/share/babykeysmash ,
+after that you can start it from anywhere with :
+
+babykeysmash
+babykeysmash --greek
+
+
+--------------- Uninstallation of current version ---------------
+./uninstall.sh
+
+This removes /usr/bin/babykeysmash and /usr/share/babykeysmash
+
+
+--------------- Quitting the application ---------------
+The window is deliberately hard for a toddler to close , a parent can quit by
+holding Escape for 3 seconds , pressing Ctrl+Shift+Q , or typing the word
+quit ( or closeapplication ) . As a last resort : pkill babykeysmash

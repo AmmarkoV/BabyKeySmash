@@ -140,11 +140,20 @@ int main(int argc,const char ** argv)
   for (i=1; i<argc; i++)
     { if (strcmp(argv[i],"--greek")==0) { greekMode=1; } }
 
-  //Allow launching from anywhere : fall back to the source tree for assets
+  //Allow launching from anywhere : fall back to the system installation
+  //( see install.sh ) and then to the source tree for assets
   if (access("shaders/background.frag",R_OK)!=0)
   {
-     fprintf(stderr,"Assets not in current directory , falling back to %s \n",BKS_SOURCE_DIR);
-     if (chdir(BKS_SOURCE_DIR)!=0) { fprintf(stderr,"Could not chdir to source directory\n"); }
+     if (access("/usr/share/babykeysmash/shaders/background.frag",R_OK)==0)
+        {
+          fprintf(stderr,"Using assets of system installation /usr/share/babykeysmash \n");
+          if (chdir("/usr/share/babykeysmash")!=0) { fprintf(stderr,"Could not chdir to installation directory\n"); }
+        }
+          else
+        {
+          fprintf(stderr,"Assets not in current directory , falling back to %s \n",BKS_SOURCE_DIR);
+          if (chdir(BKS_SOURCE_DIR)!=0) { fprintf(stderr,"Could not chdir to source directory\n"); }
+        }
   }
 
   runHookScript("scripts/on_start.sh");
