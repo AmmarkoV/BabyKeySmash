@@ -259,6 +259,30 @@ static void onButton(int button,int isDown,int x,int y)
     { sprites_spawnRandomTexture(x+rand()%200-100 , y+rand()%200-100); }
 }
 
+/* Lunar phase of right now : 0=new , 0.25=first quarter , 0.5=full ,
+   0.75=last quarter . Counted from the new moon of 2000-01-06 18:14 UTC
+   over the mean synodic month , which stays within a few hours for decades */
+static float computeMoonPhase()
+{
+  double daysSinceNewMoon = difftime(time(0),(time_t) 947182440) / 86400.0;
+  double phase = fmod(daysSinceNewMoon / 29.530588853 , 1.0);
+  if (phase<0.0) { phase += 1.0; }
+  return (float) phase;
+}
+
+static const char * moonPhaseName(float phase)
+{
+  if (phase<0.03) { return "new moon"; }
+  if (phase<0.22) { return "waxing crescent"; }
+  if (phase<0.28) { return "first quarter"; }
+  if (phase<0.47) { return "waxing gibbous"; }
+  if (phase<0.53) { return "full moon"; }
+  if (phase<0.72) { return "waning gibbous"; }
+  if (phase<0.78) { return "last quarter"; }
+  if (phase<0.97) { return "waning crescent"; }
+  return "new moon";
+}
+
 static void appendSessionStats(double sessionSeconds,const char * exitReason)
 {
   const char * home = getenv("HOME");
@@ -288,6 +312,7 @@ int main(int argc,const char ** argv)
   const char * pinnedWebcam = 0;
   const char * pinnedSleepy = 0;
   const char * speechVoice = 0;
+  float moonPhaseOverride = -1.0f;   /* <0 = use tonight's real lunar phase */
   int i;
   for (i=1; i<argc; i++)
   {
@@ -299,6 +324,7 @@ int main(int argc,const char ** argv)
     if ( (strcmp(argv[i],"--background")==0) && (i+1<argc) ) { pinnedBackground = argv[++i]; } else
     if ( (strcmp(argv[i],"--webcam")==0)     && (i+1<argc) ) { pinnedWebcam = argv[++i]; } else
     if ( (strcmp(argv[i],"--sleepy")==0)     && (i+1<argc) ) { pinnedSleepy = argv[++i]; } else
+    if ( (strcmp(argv[i],"--moon-phase")==0) && (i+1<argc) ) { moonPhaseOverride = (float) atof(argv[++i]); } else
     if ( (strcmp(argv[i],"--voice")==0)      && (i+1<argc) ) { speechVoice = argv[++i]; speechEnabled=1; } else
     if ( (strcmp(argv[i],"--help")==0) || (strcmp(argv[i],"-h")==0) )
     {
@@ -311,6 +337,8 @@ int main(int argc,const char ** argv)
              "  --background NAME     use only this background ( see --list-shaders )\n"
              "  --webcam NAME         use only this webcam effect\n"
              "  --sleepy NAME         use this end of playtime scene\n"
+             "  --moon-phase 0..1     force the moon phase of the sleepy scene\n"
+             "                        ( 0=new , 0.5=full , default = tonight's real one )\n"
              "  --voice NAME          espeak-ng voice variant , e.g. f3 , m5 , whisper\n"
              "                        ( implies --speech )\n"
              "  --list-shaders        show the available shader and voice options\n"
@@ -392,6 +420,12 @@ int main(int argc,const char ** argv)
   if ( (numberOfSleepyScenes==0) && (pinnedSleepy) )
      { numberOfSleepyScenes = discoverEffects("shaders/sleepy_*.frag","sleepy_",0,sleepyScenes,MAX_EFFECT_OPTIONS); }
   struct shadertoyEffect * sleepyFx = (numberOfSleepyScenes>0) ? sleepyScenes[0].fx : 0;
+
+  //The sleepy scene shows a photograph of the Moon lit with tonight's phase
+  unsigned int moonTexture = sprites_loadImageTexture("textures/moon.jpg");
+  float moonPhase = (moonPhaseOverride>=0.0f) ? moonPhaseOverride : computeMoonPhase();
+  shadertoy_setMoonPhase(moonPhase);
+  fprintf(stderr,"Moon phase is %0.2f ( %s )\n",moonPhase,moonPhaseName(moonPhase));
 
   fprintf(stderr,"Effects ready : %u backgrounds , %u webcam effects , %u sleepy scenes\n",
           numberOfBackgrounds,numberOfWebcamEffects,numberOfSleepyScenes);
@@ -490,7 +524,7 @@ int main(int argc,const char ** argv)
         glBlendFunc(GL_CONSTANT_ALPHA,GL_ONE_MINUS_CONSTANT_ALPHA);
       }
       shadertoy_draw(sleepyFx,t,frame,(float) width,(float) height,
-                     mouseX,mouseY,audio_texture(),0);
+                     mouseX,mouseY,audio_texture(),moonTexture);
       if (sleepyFade<1.0f) { glDisable(GL_BLEND); }
     }
 
@@ -529,6 +563,7 @@ int main(int argc,const char ** argv)
   for (i=0; i<numberOfBackgrounds; i++)   { shadertoy_unload(backgrounds[i].fx);   }
   for (i=0; i<numberOfWebcamEffects; i++) { shadertoy_unload(webcamEffects[i].fx); }
   for (i=0; i<numberOfSleepyScenes; i++)  { shadertoy_unload(sleepyScenes[i].fx);  }
+  if (moonTexture) { glDeleteTextures(1,&moonTexture); }
   babywin_close();
   runHookScript("scripts/on_exit.sh");
   return 0;

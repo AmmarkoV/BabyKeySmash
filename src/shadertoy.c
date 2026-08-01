@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -27,6 +28,7 @@ static const char * shadertoyPreamble =
 "uniform sampler2D iChannel2;\n"
 "uniform sampler2D iChannel3;\n"
 "uniform vec3  iChannelResolution[4];\n"
+"uniform float iMoonPhase;\n"
 "#define iGlobalTime iTime\n"
 "#line 1\n";
 
@@ -45,6 +47,24 @@ static const char * fullscreenVertexShader =
 
 static GLuint quadVAO = 0;
 static GLuint quadVBO = 0;
+static float moonPhase = 0.5f;
+
+void shadertoy_setMoonPhase(float phase)
+{
+  moonPhase = phase;
+}
+
+/* ShaderToy iDate is ( year , month-1 , day , seconds since midnight ) .
+   Kept out of shadertoy_draw because its "time" argument shadows time() */
+static void getShaderToyDate(float * date)
+{
+  time_t rawTime = time(0);
+  struct tm * local = localtime(&rawTime);
+  date[0] = (float) (local->tm_year+1900);
+  date[1] = (float) local->tm_mon;
+  date[2] = (float) local->tm_mday;
+  date[3] = (float) (local->tm_hour*3600 + local->tm_min*60 + local->tm_sec);
+}
 
 static GLuint compileOneShader(GLenum type,const char * source,const char * label)
 {
@@ -131,6 +151,8 @@ struct shadertoyEffect * shadertoy_load(const char * fragmentFile)
   fx->locFrame      = glGetUniformLocation(program,"iFrame");
   fx->locChannel0   = glGetUniformLocation(program,"iChannel0");
   fx->locChannel1   = glGetUniformLocation(program,"iChannel1");
+  fx->locDate       = glGetUniformLocation(program,"iDate");
+  fx->locMoonPhase  = glGetUniformLocation(program,"iMoonPhase");
   fprintf(stderr,"Loaded shadertoy effect %s \n",fragmentFile);
   return fx;
 }
@@ -149,6 +171,13 @@ void shadertoy_draw(struct shadertoyEffect * fx,
   if (fx->locFrame>=0)      { glUniform1i(fx->locFrame,frame); }
   //ShaderToy mouse coordinates have y going up
   if (fx->locMouse>=0)      { glUniform4f(fx->locMouse,mouseX,height-mouseY,mouseX,height-mouseY); }
+  if (fx->locMoonPhase>=0)  { glUniform1f(fx->locMoonPhase,moonPhase); }
+  if (fx->locDate>=0)
+  {
+    float date[4];
+    getShaderToyDate(date);
+    glUniform4f(fx->locDate,date[0],date[1],date[2],date[3]);
+  }
 
   if (chan0Tex)
   {

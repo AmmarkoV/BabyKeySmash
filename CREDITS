@@ -1,0 +1,37 @@
+--------------- Third party assets ---------------
+
+The source code of BabyKeySmash is GPL3 ( see LICENSE ) . The bundled assets
+below keep their own licenses , which are compatible with redistribution but
+require the attribution reproduced here .
+
+
+--- Moon photograph : textures/moon.jpg ---
+Original : FullMoon2010.jpg by Gregory H. Revera , 22 October 2010
+Source   : https://commons.wikimedia.org/wiki/File:FullMoon2010.jpg
+License  : Creative Commons Attribution-ShareAlike 3.0 ( CC BY-SA 3.0 )
+           https://creativecommons.org/licenses/by-sa/3.0/
+Changes  : cropped to the lunar disc and scaled down to 1024x1024
+Note     : this image stays under CC BY-SA 3.0 , the GPL3 of the source code
+           does not apply to it . Keep this attribution when redistributing .
+
+
+--- Emoji artwork : textures/emoji_*.png ---
+Original : Noto Color Emoji by Google
+Source   : https://github.com/googlefonts/noto-emoji
+License  : SIL Open Font License 1.1
+           https://scripts.sil.org/OFL
+Changes  : single glyph bitmaps extracted from the system font with
+           tools/make_textures.py and scaled to 256x256
+
+
+--- Greek alphabet textures : textures/greek/*.png ---
+Rendered with the DejaVu Sans Bold font ( DejaVu fonts license , a permissive
+Bitstream Vera derivative ) by tools/make_textures.py
+
+
+--- Sound effects : sounds/*.ogg ---
+Imported from a personal collection of short sound samples with
+tools/import_sounds.sh . Their origin and licensing were not verified .
+Before redistributing this repository publicly , replace them with clips of
+known provenance ( for example freesound.org samples under CC0 ) or remove
+the sounds/ directory ; the application runs fine without any sounds .

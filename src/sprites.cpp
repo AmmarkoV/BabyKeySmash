@@ -266,6 +266,17 @@ const char * sprites_spawnCounted(int count)
   return textures[pick].name;
 }
 
+unsigned int sprites_loadImageTexture(const char * filename)
+{
+  cv::Mat img = cv::imread(filename,cv::IMREAD_COLOR);
+  if (img.empty()) { fprintf(stderr,"Could not read image %s \n",filename); return 0; }
+  cv::Mat rgba;
+  cv::cvtColor(img,rgba,cv::COLOR_BGR2RGBA);
+  cv::flip(rgba,rgba,0); /* GL textures have their origin bottom-left */
+  fprintf(stderr,"Loaded image %s ( %ux%u ) \n",filename,rgba.cols,rgba.rows);
+  return uploadRGBAMat(rgba);
+}
+
 int sprites_latinToGreekIndex(char character)
 {
   if ( (character>='a') && (character<='z') ) { return latinToGreek[character-'a']; }

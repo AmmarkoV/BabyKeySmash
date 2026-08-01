@@ -27,6 +27,10 @@ const char * sprites_spawnCounted(int count);
 /* Greek keyboard layout mapping , 'A'..'Z' -> alphabet index 0..23 or -1 */
 int sprites_latinToGreekIndex(char character);
 
+/* Load an image ( png / jpg ) into a plain GL texture , used for scene
+   artwork like the moon photo of the sleepy scene , retval 0 = failure */
+unsigned int sprites_loadImageTexture(const char * filename);
+
 /* Load the pre-baked Greek alphabet ( see tools/make_textures.py ) so that
    letter keys pop Greek letters , retval = number of letters loaded */
 int sprites_loadGreek(const char * greekDirectory);

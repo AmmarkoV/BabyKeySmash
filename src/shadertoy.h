@@ -24,7 +24,13 @@ struct shadertoyEffect
   int locFrame;
   int locChannel0;
   int locChannel1;
+  int locDate;
+  int locMoonPhase;
 };
+
+/* Current lunar phase used by the sleepy scene shader through the
+   iMoonPhase uniform : 0=new , 0.25=first quarter , 0.5=full , 0.75=last */
+void shadertoy_setMoonPhase(float phase);
 
 /* Create the shared fullscreen quad , call once after GL context + GLEW are up */
 int shadertoy_init();

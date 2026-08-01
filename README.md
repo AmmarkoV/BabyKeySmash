@@ -56,7 +56,10 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   picks an espeak-ng voice variant (`f1..f5`, `m1..m7`, `croak`, `whisper`,
   implies `--speech`);
   `--minutes N` limits playtime — when time is up the screen crossfades into
-  a calm night scene with a moon and twinkling stars, signalling sleep time.
+  a calm night scene of twinkling stars and a **photograph of the real Moon,
+  shaded with tonight's actual lunar phase** (so it matches the moon outside
+  the window; faint earthshine keeps the dark limb visible, and
+  `--moon-phase 0..1` forces a specific phase).
   Every session appends a line to `~/.babykeysmash_stats`
   (date, duration, keystrokes, mouse moves, clicks).
 - Missing webcam, microphone, sounds or espeak-ng is fine — the corresponding
@@ -161,5 +164,11 @@ Ammar Qammaz (AmmarkoV)
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE). Emoji textures are extracted from Google's
-Noto Color Emoji font (SIL Open Font License 1.1).
+Source code is GPL-3.0 — see [LICENSE](LICENSE).
+
+Bundled artwork keeps its own license and attribution, listed in
+[CREDITS](CREDITS): the moon photograph is
+[FullMoon2010.jpg](https://commons.wikimedia.org/wiki/File:FullMoon2010.jpg)
+by Gregory H. Revera (CC BY-SA 3.0, cropped and downscaled), and the emoji
+come from Google's Noto Color Emoji (SIL OFL 1.1). Note that the bundled
+sound effects are of unverified origin — see CREDITS before publishing.
