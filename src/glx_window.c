@@ -289,7 +289,7 @@ int babywin_processEvents()
           if ( ( (keysym==XK_q) || (keysym==XK_Q) ) &&
                (event.xkey.state & ControlMask) && (event.xkey.state & ShiftMask) )
                  { exitReason = "Ctrl+Shift+Q pressed"; return 0; }
-          if (cb && cb->onKey) { cb->onKey(keysym); }
+          if (cb && cb->onKey) { cb->onKey(keysym,event.xkey.state); }
         }
         break;
       }

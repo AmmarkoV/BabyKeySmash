@@ -40,6 +40,17 @@ babykeysmash
 babykeysmash --greek                  ( Greek letters and speech )
 babykeysmash --minutes 20             ( sleepy scene after 20 minutes )
 babykeysmash --volume 50              ( half volume for sounds and speech )
+babykeysmash --background sea         ( pin one background , see below )
+babykeysmash --webcam wobble          ( pin one webcam effect )
+babykeysmash --voice f3               ( pick an espeak-ng voice variant )
+babykeysmash --list-shaders           ( list every effect and voice option )
+babykeysmash --help                   ( all options )
+
+Effects that are not pinned rotate every 3 minutes , while playing a parent
+can also switch them live with Ctrl+Shift+B ( background ) and Ctrl+Shift+W
+( webcam effect ) . New effects are added by dropping a ShaderToy style file
+named shaders/background_NAME.frag , shaders/webcam_NAME.frag or
+shaders/sleepy_NAME.frag in place , no rebuild needed .
 
 The installation also adds a BabyKeySmash entry with a teddy bear icon to
 the applications menu .

@@ -13,7 +13,7 @@ extern "C" {
 
 struct babyWindowCallbacks
 {
-  void (*onKey)(unsigned long keysym);            /* called on every KeyPress            */
+  void (*onKey)(unsigned long keysym,unsigned int modifiers); /* KeyPress + X modifier state */
   void (*onMouseMove)(int x,int y);               /* called on pointer motion            */
   void (*onButton)(int button,int isDown,int x,int y); /* mouse buttons                  */
 };

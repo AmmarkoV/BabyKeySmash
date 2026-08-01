@@ -31,10 +31,12 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   screen edges.
 - **Motion magic**: waving in front of the webcam sprinkles sparkles where
   the movement happened.
-- **Rotating effects**: the background (plasma, sea) and webcam effect
-  (edge-glow, kaleidoscope) rotate every 3 minutes with a crossfade; any
-  ShaderToy-style `.frag` dropped into the rotation in `src/main.cpp` joins
-  the cycle.
+- **Switchable effects**: backgrounds (plasma, sea, bubbles), webcam effects
+  (edge-glow, kaleidoscope, dot-mosaic, funhouse wobble) and sleepy scenes
+  are discovered from `shaders/` at startup. They rotate every 3 minutes with
+  a crossfade, a parent can switch them live with **Ctrl+Shift+B** /
+  **Ctrl+Shift+W**, or one can be pinned with `--background sea`,
+  `--webcam wobble`, `--sleepy moon`. `--list-shaders` prints every option.
 - **Microphone** (ALSA): a capture thread computes an FFT and fills a texture
   in the ShaderToy audio layout (row 0 = spectrum, row 1 = waveform); the
   background plasma pulses with sound and a waveform ring dances around the
@@ -48,13 +50,20 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   smashing cannot spam audio. Populate/refresh the bank with
   `tools/import_sounds.sh [sourceDirectory]` (ffmpeg converts mp3s to the
   expected ogg format, trimmed to 4 s); delete any ogg you dislike.
-- **Session flow**: `--volume 0..100` scales sounds and speech;
+- **Session flow**: `--volume 0..100` scales sounds and speech, `--voice f3`
+  picks an espeak-ng voice variant (`f1..f5`, `m1..m7`, `croak`, `whisper`);
   `--minutes N` limits playtime — when time is up the screen crossfades into
   a calm night scene with a moon and twinkling stars, signalling sleep time.
   Every session appends a line to `~/.babykeysmash_stats`
   (date, duration, keystrokes, mouse moves, clicks).
 - Missing webcam, microphone, sounds or espeak-ng is fine — the corresponding
   feature is simply disabled.
+
+## Parent controls
+
+Run `babykeysmash --help` for every option, `--list-shaders` for the
+available effect and voice names. While playing, **Ctrl+Shift+B** switches
+the background and **Ctrl+Shift+W** the webcam effect.
 
 ## Quitting (parents only)
 
@@ -114,15 +123,26 @@ python3 tools/make_textures.py     # needs python3-pil , python3-numpy , python3
 
 ### Shaders
 
-`shaders/background.frag` (iChannel0 = audio texture) and
-`shaders/webcam.frag` (iChannel0 = webcam, iChannel1 = audio) are
-**ShaderToy-compatible**: they are `mainImage(out vec4, in vec2)` bodies
-compiled behind a preamble declaring `iResolution`, `iTime`, `iMouse`,
-`iChannel0..3`. Any single-pass shader from
-[shadertoy.com](https://www.shadertoy.com) can be pasted over these files
-verbatim — e.g. webcam effects like
-[cll3zf](https://www.shadertoy.com/view/cll3zf) or microphone visualizations
-like [4sjfzm](https://www.shadertoy.com/view/4sjfzm).
+Every shader in `shaders/` is **ShaderToy-compatible**: a
+`mainImage(out vec4, in vec2)` body compiled behind a preamble declaring
+`iResolution`, `iTime`, `iMouse`, `iChannel0..3`. Any single-pass shader from
+[shadertoy.com](https://www.shadertoy.com) can be pasted in verbatim — e.g.
+webcam effects like [cll3zf](https://www.shadertoy.com/view/cll3zf) or
+microphone visualizations like
+[4sjfzm](https://www.shadertoy.com/view/4sjfzm).
+
+**Adding one is just dropping in a file** — the filename prefix decides which
+slot it joins and what its inputs are:
+
+| filename | slot | iChannel0 | iChannel1 |
+|---|---|---|---|
+| `background_<name>.frag` | background | audio texture | — |
+| `webcam_<name>.frag` | webcam effect | webcam image | audio texture |
+| `sleepy_<name>.frag` | end-of-playtime scene | audio texture | — |
+
+The audio texture follows the ShaderToy layout (row 0 = FFT spectrum,
+row 1 = waveform). A new file appears in `--list-shaders`, joins the
+rotation, and can be pinned by name — no code change, no rebuild.
 
 ### Start/exit hooks
 

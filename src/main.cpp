@@ -10,6 +10,8 @@
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
+#include <glob.h>
+#include <X11/X.h>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -38,6 +40,79 @@ static unsigned long clicksHandled = 0;
 
 static int greekMode = 0;
 static int calmMode = 0;    /* after --minutes N : sleepy scene , no spawns */
+
+/* Shader options are discovered by filename : shaders/background_*.frag ,
+   shaders/webcam_*.frag , shaders/sleepy_*.frag . Drop a new ShaderToy
+   style file in and it joins the rotation ; pin one with --background NAME
+   etc. or cycle live with Ctrl+Shift+B / Ctrl+Shift+W */
+#define MAX_EFFECT_OPTIONS 16
+struct effectOption
+{
+  struct shadertoyEffect * fx;
+  char name[64];
+};
+static struct effectOption backgrounds[MAX_EFFECT_OPTIONS];
+static struct effectOption webcamEffects[MAX_EFFECT_OPTIONS];
+static struct effectOption sleepyScenes[MAX_EFFECT_OPTIONS];
+static int numberOfBackgrounds = 0;
+static int numberOfWebcamEffects = 0;
+static int numberOfSleepyScenes = 0;
+static int backgroundCycleOffset = 0;
+static int webcamCycleOffset = 0;
+
+static void effectNameFromPath(const char * path,const char * prefix,char * name,unsigned int nameSize)
+{
+  const char * base = strrchr(path,'/');
+  base = (base) ? base+1 : path;
+  snprintf(name,nameSize,"%s",base+strlen(prefix));
+  char * dot = strrchr(name,'.');
+  if (dot) { *dot=0; }
+}
+
+static int discoverEffects(const char * pattern,const char * prefix,const char * pinnedName,
+                           struct effectOption * out,int maxOut)
+{
+  glob_t files;
+  memset(&files,0,sizeof(files));
+  if (glob(pattern,0,0,&files)!=0) { return 0; }
+
+  int n=0;
+  unsigned int i;
+  for (i=0; (i<files.gl_pathc) && (n<maxOut); i++)
+  {
+    char name[64];
+    effectNameFromPath(files.gl_pathv[i],prefix,name,sizeof(name));
+    if ( (pinnedName) && (strcmp(name,pinnedName)!=0) ) { continue; }
+    struct shadertoyEffect * fx = shadertoy_load(files.gl_pathv[i]);
+    if (fx)
+    {
+      out[n].fx = fx;
+      snprintf(out[n].name,sizeof(out[n].name),"%s",name);
+      n++;
+    }
+  }
+  globfree(&files);
+  return n;
+}
+
+static void listShaderOptions(const char * label,const char * pattern,const char * prefix)
+{
+  printf("%s :",label);
+  glob_t files;
+  memset(&files,0,sizeof(files));
+  if (glob(pattern,0,0,&files)==0)
+  {
+    unsigned int i;
+    for (i=0; i<files.gl_pathc; i++)
+    {
+      char name[64];
+      effectNameFromPath(files.gl_pathv[i],prefix,name,sizeof(name));
+      printf(" %s",name);
+    }
+    globfree(&files);
+  }
+  printf("\n");
+}
 
 /* Optional hook scripts , e.g. switching keyboard lighting with
    polychromatic-cli while the app runs and restoring it on exit */
@@ -114,13 +189,30 @@ static void onDigit(int digit)
      { if ( !( (name) && (soundbank_playNamed(name)) ) ) { soundbank_playRandom(); } }
 }
 
-static void onKey(unsigned long keysym)
+static void onKey(unsigned long keysym,unsigned int modifiers)
 {
   keysHandled++;
 
   //the typed-word quit detector keeps working even in calm mode
   if ( (keysym>=XK_a) && (keysym<=XK_z) ) { rememberTypedLetter('a' + (keysym-XK_a)); }
   if ( (keysym>=XK_A) && (keysym<=XK_Z) ) { rememberTypedLetter('a' + (keysym-XK_A)); }
+
+  //Parent shortcuts to switch effects live , Ctrl+Shift is toddler proof
+  if ( (modifiers & ControlMask) && (modifiers & ShiftMask) )
+  {
+    if ( (keysym==XK_b) || (keysym==XK_B) )
+    {
+      backgroundCycleOffset++;
+      fprintf(stderr,"Background effect switched\n");
+      return;
+    }
+    if ( (keysym==XK_w) || (keysym==XK_W) )
+    {
+      webcamCycleOffset++;
+      fprintf(stderr,"Webcam effect switched\n");
+      return;
+    }
+  }
 
   if (calmMode) { return; }
 
@@ -190,20 +282,45 @@ int main(int argc,const char ** argv)
 
   int playMinutes = 0;   /* 0 = unlimited */
   int volumePercent = 100;
+  int listShaders = 0;
+  const char * pinnedBackground = 0;  /* 0 = use every option and rotate */
+  const char * pinnedWebcam = 0;
+  const char * pinnedSleepy = 0;
+  const char * speechVoice = 0;
   int i;
   for (i=1; i<argc; i++)
   {
-    if (strcmp(argv[i],"--greek")==0)                    { greekMode=1; } else
-    if ( (strcmp(argv[i],"--minutes")==0) && (i+1<argc) ) { playMinutes = atoi(argv[++i]); } else
-    if ( (strcmp(argv[i],"--volume")==0)  && (i+1<argc) ) { volumePercent = atoi(argv[++i]); }
+    if (strcmp(argv[i],"--greek")==0)                        { greekMode=1; } else
+    if (strcmp(argv[i],"--list-shaders")==0)                 { listShaders=1; } else
+    if ( (strcmp(argv[i],"--minutes")==0)    && (i+1<argc) ) { playMinutes = atoi(argv[++i]); } else
+    if ( (strcmp(argv[i],"--volume")==0)     && (i+1<argc) ) { volumePercent = atoi(argv[++i]); } else
+    if ( (strcmp(argv[i],"--background")==0) && (i+1<argc) ) { pinnedBackground = argv[++i]; } else
+    if ( (strcmp(argv[i],"--webcam")==0)     && (i+1<argc) ) { pinnedWebcam = argv[++i]; } else
+    if ( (strcmp(argv[i],"--sleepy")==0)     && (i+1<argc) ) { pinnedSleepy = argv[++i]; } else
+    if ( (strcmp(argv[i],"--voice")==0)      && (i+1<argc) ) { speechVoice = argv[++i]; } else
+    if ( (strcmp(argv[i],"--help")==0) || (strcmp(argv[i],"-h")==0) )
+    {
+      printf("Usage : babykeysmash [options]\n"
+             "  --greek               Greek letters , spoken with Greek letter names\n"
+             "  --minutes N           after N minutes fade into the calm sleepy scene\n"
+             "  --volume 0..100       volume of sound effects and speech\n"
+             "  --background NAME     use only this background ( see --list-shaders )\n"
+             "  --webcam NAME         use only this webcam effect\n"
+             "  --sleepy NAME         use this end of playtime scene\n"
+             "  --voice NAME          espeak-ng voice variant , e.g. f3 , m5 , whisper\n"
+             "  --list-shaders        show the available shader and voice options\n"
+             "Effects not pinned rotate every 3 minutes , a parent can also switch\n"
+             "them live with Ctrl+Shift+B ( background ) and Ctrl+Shift+W ( webcam )\n");
+      return 0;
+    }
   }
   if (volumePercent<0) { volumePercent=0; } if (volumePercent>100) { volumePercent=100; }
 
   //Allow launching from anywhere : fall back to the system installation
   //( see install.sh ) and then to the source tree for assets
-  if (access("shaders/background.frag",R_OK)!=0)
+  if (access("shaders",R_OK)!=0)
   {
-     if (access("/usr/share/babykeysmash/shaders/background.frag",R_OK)==0)
+     if (access("/usr/share/babykeysmash/shaders",R_OK)==0)
         {
           fprintf(stderr,"Using assets of system installation /usr/share/babykeysmash \n");
           if (chdir("/usr/share/babykeysmash")!=0) { fprintf(stderr,"Could not chdir to installation directory\n"); }
@@ -213,6 +330,15 @@ int main(int argc,const char ** argv)
           fprintf(stderr,"Assets not in current directory , falling back to %s \n",BKS_SOURCE_DIR);
           if (chdir(BKS_SOURCE_DIR)!=0) { fprintf(stderr,"Could not chdir to source directory\n"); }
         }
+  }
+
+  if (listShaders)
+  {
+    listShaderOptions("Backgrounds   (--background)","shaders/background_*.frag","background_");
+    listShaderOptions("Webcam effects(--webcam)    ","shaders/webcam_*.frag"    ,"webcam_");
+    listShaderOptions("Sleepy scenes (--sleepy)    ","shaders/sleepy_*.frag"    ,"sleepy_");
+    speech_listVoices();
+    return 0;
   }
 
   runHookScript("scripts/on_start.sh");
@@ -235,23 +361,35 @@ int main(int argc,const char ** argv)
 
   shadertoy_init();
 
-  //Backgrounds and webcam effects rotate every few minutes for variety
-  struct shadertoyEffect * backgrounds[4];
-  int numberOfBackgrounds = 0;
-  backgrounds[numberOfBackgrounds] = shadertoy_load("shaders/background.frag");
-  if (backgrounds[numberOfBackgrounds]==0) { fprintf(stderr,"Background shader is required , exiting\n"); runHookScript("scripts/on_exit.sh"); return 1; }
-  numberOfBackgrounds++;
-  backgrounds[numberOfBackgrounds] = shadertoy_load("shaders/sea.frag");
-  if (backgrounds[numberOfBackgrounds]!=0) { numberOfBackgrounds++; }
+  //Every shaders/<slot>_*.frag is an option , unpinned slots rotate
+  numberOfBackgrounds = discoverEffects("shaders/background_*.frag","background_",pinnedBackground,
+                                        backgrounds,MAX_EFFECT_OPTIONS);
+  if ( (numberOfBackgrounds==0) && (pinnedBackground) )
+  {
+    fprintf(stderr,"No background named %s , falling back to all of them ( --list-shaders shows the options )\n",pinnedBackground);
+    numberOfBackgrounds = discoverEffects("shaders/background_*.frag","background_",0,
+                                          backgrounds,MAX_EFFECT_OPTIONS);
+  }
+  if (numberOfBackgrounds==0)
+     { fprintf(stderr,"At least one background shader is required , exiting\n"); runHookScript("scripts/on_exit.sh"); return 1; }
 
-  struct shadertoyEffect * webcamEffects[4];
-  int numberOfWebcamEffects = 0;
-  webcamEffects[numberOfWebcamEffects] = shadertoy_load("shaders/webcam.frag");
-  if (webcamEffects[numberOfWebcamEffects]!=0) { numberOfWebcamEffects++; }
-  webcamEffects[numberOfWebcamEffects] = shadertoy_load("shaders/kaleido.frag");
-  if (webcamEffects[numberOfWebcamEffects]!=0) { numberOfWebcamEffects++; }
+  numberOfWebcamEffects = discoverEffects("shaders/webcam_*.frag","webcam_",pinnedWebcam,
+                                          webcamEffects,MAX_EFFECT_OPTIONS);
+  if ( (numberOfWebcamEffects==0) && (pinnedWebcam) )
+  {
+    fprintf(stderr,"No webcam effect named %s , falling back to all of them\n",pinnedWebcam);
+    numberOfWebcamEffects = discoverEffects("shaders/webcam_*.frag","webcam_",0,
+                                            webcamEffects,MAX_EFFECT_OPTIONS);
+  }
 
-  struct shadertoyEffect * sleepyFx = shadertoy_load("shaders/sleepy.frag");
+  numberOfSleepyScenes = discoverEffects("shaders/sleepy_*.frag","sleepy_",pinnedSleepy,
+                                         sleepyScenes,MAX_EFFECT_OPTIONS);
+  if ( (numberOfSleepyScenes==0) && (pinnedSleepy) )
+     { numberOfSleepyScenes = discoverEffects("shaders/sleepy_*.frag","sleepy_",0,sleepyScenes,MAX_EFFECT_OPTIONS); }
+  struct shadertoyEffect * sleepyFx = (numberOfSleepyScenes>0) ? sleepyScenes[0].fx : 0;
+
+  fprintf(stderr,"Effects ready : %u backgrounds , %u webcam effects , %u sleepy scenes\n",
+          numberOfBackgrounds,numberOfWebcamEffects,numberOfSleepyScenes);
 
   sprites_init("textures",width,height);
   if (greekMode) { sprites_loadGreek("textures/greek"); }
@@ -262,6 +400,7 @@ int main(int argc,const char ** argv)
   soundbank_setVolume(0.8f*volumePercent/100.0f);
   speech_init();
   speech_setVolume((float) volumePercent/100.0f);
+  speech_setVoice(speechVoice);
   if (playMinutes>0) { fprintf(stderr,"Playtime limited to %u minutes , then the sleepy scene comes up\n",playMinutes); }
 
   fprintf(stderr,"BabyKeySmash running at %ux%u , webcam=%u , microphone=%u \n",
@@ -296,20 +435,22 @@ int main(int argc,const char ** argv)
 
     if (sleepyFade<1.0f)
     {
-      //Backgrounds rotate every few minutes with a short crossfade
+      //Backgrounds rotate every few minutes ( plus any live Ctrl+Shift+B
+      //switches ) with a short crossfade
       #define ROTATION_SECONDS 180.0f
-      int slot = (int) (t/ROTATION_SECONDS);
+      int slot = (int) (t/ROTATION_SECONDS) + backgroundCycleOffset;
       float phase = fmodf(t,ROTATION_SECONDS);
       int backgroundIndex = slot % numberOfBackgrounds;
+      int crossfading = ( (slot>0) && (phase<3.0f) && (numberOfBackgrounds>1) );
 
-      shadertoy_draw(backgrounds[( (slot>0) && (phase<3.0f) ) ? (slot-1)%numberOfBackgrounds : backgroundIndex],
+      shadertoy_draw(backgrounds[crossfading ? (slot-1)%numberOfBackgrounds : backgroundIndex].fx,
                      t,frame,(float) width,(float) height,mouseX,mouseY,audio_texture(),0);
-      if ( (slot>0) && (phase<3.0f) )
+      if (crossfading)
       {
         glEnable(GL_BLEND);
         glBlendColor(0.0f,0.0f,0.0f,phase/3.0f);
         glBlendFunc(GL_CONSTANT_ALPHA,GL_ONE_MINUS_CONSTANT_ALPHA);
-        shadertoy_draw(backgrounds[backgroundIndex],t,frame,(float) width,(float) height,
+        shadertoy_draw(backgrounds[backgroundIndex].fx,t,frame,(float) width,(float) height,
                        mouseX,mouseY,audio_texture(),0);
         glDisable(GL_BLEND);
       }
@@ -317,7 +458,8 @@ int main(int argc,const char ** argv)
       //Webcam effect ( also rotating ) blended on top with a breathing mix factor
       if ( (webcamReady) && (numberOfWebcamEffects>0) && (!calmMode) )
       {
-        struct shadertoyEffect * camFx = webcamEffects[slot % numberOfWebcamEffects];
+        struct shadertoyEffect * camFx =
+          webcamEffects[((int) (t/ROTATION_SECONDS) + webcamCycleOffset) % numberOfWebcamEffects].fx;
         float mix = 0.45f + 0.30f * (float) sin(now*0.15);
         glEnable(GL_BLEND);
         glBlendColor(0.0f,0.0f,0.0f,mix);
@@ -373,9 +515,9 @@ int main(int argc,const char ** argv)
   audio_stop();
   soundbank_close();
   sprites_close();
-  for (i=0; i<numberOfBackgrounds; i++)   { shadertoy_unload(backgrounds[i]);   }
-  for (i=0; i<numberOfWebcamEffects; i++) { shadertoy_unload(webcamEffects[i]); }
-  shadertoy_unload(sleepyFx);
+  for (i=0; i<numberOfBackgrounds; i++)   { shadertoy_unload(backgrounds[i].fx);   }
+  for (i=0; i<numberOfWebcamEffects; i++) { shadertoy_unload(webcamEffects[i].fx); }
+  for (i=0; i<numberOfSleepyScenes; i++)  { shadertoy_unload(sleepyScenes[i].fx);  }
   babywin_close();
   runHookScript("scripts/on_exit.sh");
   return 0;
