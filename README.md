@@ -17,7 +17,9 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   pointer grabbed — the window manager never sees any input, so there is
   nothing for a toddler to accidentally trigger.
 - **Keyboard**: letters and digits pop as big colorful characters; every other
-  key pops a random sprite from `textures/`.
+  key pops a random sprite from `textures/`. With `--greek` the Greek alphabet
+  pops instead: Latin keys are mapped through the Greek keyboard layout
+  (a→Α, b→Β, g→Γ, ...) and native Greek layout keysyms are handled directly.
 - **Mouse**: movement leaves a soft glowing trail, clicks make sprite bursts.
 - **Microphone** (ALSA): a capture thread computes an FFT and fills a texture
   in the ShaderToy audio layout (row 0 = spectrum, row 1 = waveform); the

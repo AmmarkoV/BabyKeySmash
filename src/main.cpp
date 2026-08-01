@@ -29,6 +29,10 @@ static float lastTrailX = -1000.0f , lastTrailY = -1000.0f;
 static int quitWordTyped = 0;
 static char typedWordBuffer[32];
 
+static unsigned long keysHandled = 0;
+static unsigned long mouseMovesHandled = 0;
+static unsigned long clicksHandled = 0;
+
 /* Optional hook scripts , e.g. switching keyboard lighting with
    polychromatic-cli while the app runs and restoring it on exit */
 static void runHookScript(const char * script)
@@ -87,6 +91,7 @@ static int greekKeysymToIndex(unsigned long keysym)
 
 static void onKey(unsigned long keysym)
 {
+  keysHandled++;
   int greekIndex = greekKeysymToIndex(keysym);
   if (greekIndex>=0)
        { sprites_spawnGreek(greekIndex); } else
@@ -102,6 +107,7 @@ static void onKey(unsigned long keysym)
 
 static void onMouseMove(int x,int y)
 {
+  mouseMovesHandled++;
   mouseX = (float) x;
   mouseY = (float) y;
   float dx = x-lastTrailX , dy = y-lastTrailY;
@@ -116,6 +122,7 @@ static void onMouseMove(int x,int y)
 static void onButton(int button,int isDown,int x,int y)
 {
   if (!isDown) { return; }
+  clicksHandled++;
   //A little burst where the kid clicked
   int i;
   for (i=0; i<4; i++)
@@ -217,6 +224,9 @@ int main(int argc,const char ** argv)
   }
 
   fprintf(stderr,"Shutting down..\n");
+  fprintf(stderr,"Session smash report : %lu keystrokes , %lu mouse moves , %lu clicks , %lu events total :)\n",
+          keysHandled,mouseMovesHandled,clicksHandled,
+          keysHandled+mouseMovesHandled+clicksHandled);
   webcam_stop();
   audio_stop();
   sprites_close();

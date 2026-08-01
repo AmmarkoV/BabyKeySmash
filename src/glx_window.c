@@ -40,6 +40,7 @@ static struct babyWindowCallbacks * cb = 0;
 
 static double escHeldSince = 0.0;      /* 0.0 = escape not held */
 static double lastScreenSaverPoke = 0.0;
+static double lastRaise = 0.0;
 static volatile int signalQuitRequested = 0;
 
 static double getTimeSeconds()
@@ -323,6 +324,14 @@ int babywin_processEvents()
   {
     XResetScreenSaver(display);
     lastScreenSaverPoke = now;
+  }
+
+  //Desktop environments restack their windows above unmanaged
+  //override-redirect windows , so keep raising ours back on top
+  if (now-lastRaise > 1.0)
+  {
+    XRaiseWindow(display,win);
+    lastRaise = now;
   }
 
   return 1;
