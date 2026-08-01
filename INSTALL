@@ -42,6 +42,7 @@ babykeysmash --speech                 ( speak letters and numbers aloud )
 babykeysmash --minutes 20             ( sleepy scene after 20 minutes )
 babykeysmash --moon-phase 0.5         ( force a full moon in that scene )
 babykeysmash --volume 50              ( half volume for sounds and speech )
+babykeysmash --simplebg               ( calm blue to black gradient , no webcam )
 babykeysmash --background sea         ( pin one background , see below )
 babykeysmash --webcam wobble          ( pin one webcam effect )
 babykeysmash --voice f3               ( voice variant , implies --speech )
@@ -62,6 +63,14 @@ the applications menu .
 ./uninstall.sh
 
 This removes /usr/bin/babykeysmash and /usr/share/babykeysmash
+
+
+--------------- Hook scripts ---------------
+If they are executable , scripts/on_start.sh runs at startup ,
+scripts/on_sleep.sh once when playtime ends and the sleepy scene begins ,
+and scripts/on_exit.sh on every exit path . The bundled examples dim and
+recolour an RGB keyboard with polychromatic-cli , edit them for your own
+hardware or remove the execute bit to disable them .
 
 
 --------------- Quitting the application ---------------

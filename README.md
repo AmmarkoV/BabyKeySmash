@@ -33,7 +33,12 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   screen edges.
 - **Motion magic**: waving in front of the webcam sprinkles sparkles where
   the movement happened.
-- **Switchable effects**: backgrounds (plasma, sea, bubbles), webcam effects
+- **Calm mode**: `--simplebg` replaces the animated visuals with a quiet
+  deep-blue-to-black gradient that breathes slowly, and leaves the webcam
+  effect off — for winding down, a dark room, or a child who finds the busy
+  effects too much. Sprites, letters and sounds keep working as usual.
+  (`--background calm` gives the same gradient but keeps the webcam effect.)
+- **Switchable effects**: backgrounds (plasma, sea, bubbles, calm), webcam effects
   (edge-glow, kaleidoscope, dot-mosaic, funhouse wobble) and sleepy scenes
   are discovered from `shaders/` at startup. They rotate every 3 minutes with
   a crossfade, a parent can switch them live with **Ctrl+Shift+B** /
@@ -150,13 +155,21 @@ The audio texture follows the ShaderToy layout (row 0 = FFT spectrum,
 row 1 = waveform). A new file appears in `--list-shaders`, joins the
 rotation, and can be pinned by name — no code change, no rebuild.
 
-### Start/exit hooks
+### Hook scripts
 
-If executable, `scripts/on_start.sh` runs at startup and `scripts/on_exit.sh`
-on every exit path. The bundled scripts switch an RGB keyboard's lighting to a
-wave effect while playing and restore the normal profile afterwards using
-`polychromatic-cli` — edit them to match your hardware, or strip the execute
-bit to disable them.
+If executable, these run at the matching moment — each is optional, strip the
+execute bit to disable one:
+
+| script | when |
+|---|---|
+| `scripts/on_start.sh` | at startup |
+| `scripts/on_sleep.sh` | once when playtime ends (`--minutes N`) and the sleepy scene begins |
+| `scripts/on_exit.sh` | on every exit path |
+
+The bundled examples drive an RGB keyboard with `polychromatic-cli`: a wave
+effect while playing, a dim slow breathing night colour when the sleepy scene
+comes up, and the normal profile at full brightness again on exit. Edit them
+to match your own hardware.
 
 ## Author
 

@@ -308,6 +308,7 @@ int main(int argc,const char ** argv)
   int volumePercent = 100;
   int listShaders = 0;
   int speechEnabled = 0;  /* speech is opt in through --speech */
+  int simpleBackground = 0;
   const char * pinnedBackground = 0;  /* 0 = use every option and rotate */
   const char * pinnedWebcam = 0;
   const char * pinnedSleepy = 0;
@@ -318,6 +319,7 @@ int main(int argc,const char ** argv)
   {
     if (strcmp(argv[i],"--greek")==0)                        { greekMode=1; } else
     if (strcmp(argv[i],"--speech")==0)                       { speechEnabled=1; } else
+    if (strcmp(argv[i],"--simplebg")==0)                     { simpleBackground=1; } else
     if (strcmp(argv[i],"--list-shaders")==0)                 { listShaders=1; } else
     if ( (strcmp(argv[i],"--minutes")==0)    && (i+1<argc) ) { playMinutes = atoi(argv[++i]); } else
     if ( (strcmp(argv[i],"--volume")==0)     && (i+1<argc) ) { volumePercent = atoi(argv[++i]); } else
@@ -334,6 +336,8 @@ int main(int argc,const char ** argv)
              "                        ( off by default , only sound effects are played )\n"
              "  --minutes N           after N minutes fade into the calm sleepy scene\n"
              "  --volume 0..100       volume of sound effects and speech\n"
+             "  --simplebg            calm deep blue to black gradient and no webcam\n"
+             "                        effect , for winding down or a dark room\n"
              "  --background NAME     use only this background ( see --list-shaders )\n"
              "  --webcam NAME         use only this webcam effect\n"
              "  --sleepy NAME         use this end of playtime scene\n"
@@ -348,6 +352,10 @@ int main(int argc,const char ** argv)
     }
   }
   if (volumePercent<0) { volumePercent=0; } if (volumePercent>100) { volumePercent=100; }
+
+  //--simplebg is a preset : the calm gradient and no busy webcam overlay on
+  //top of it . An explicit --background still wins over it
+  if ( (simpleBackground) && (pinnedBackground==0) ) { pinnedBackground = "calm"; }
 
   //Allow launching from anywhere : fall back to the system installation
   //( see install.sh ) and then to the source tree for assets
@@ -406,14 +414,21 @@ int main(int argc,const char ** argv)
   if (numberOfBackgrounds==0)
      { fprintf(stderr,"At least one background shader is required , exiting\n"); runHookScript("scripts/on_exit.sh"); return 1; }
 
-  numberOfWebcamEffects = discoverEffects("shaders/webcam_*.frag","webcam_",pinnedWebcam,
-                                          webcamEffects,MAX_EFFECT_OPTIONS);
-  if ( (numberOfWebcamEffects==0) && (pinnedWebcam) )
+  //In simple background mode the webcam effect is left out entirely , it
+  //would drown out the calm gradient it is blended over
+  if (!simpleBackground)
   {
-    fprintf(stderr,"No webcam effect named %s , falling back to all of them\n",pinnedWebcam);
-    numberOfWebcamEffects = discoverEffects("shaders/webcam_*.frag","webcam_",0,
+    numberOfWebcamEffects = discoverEffects("shaders/webcam_*.frag","webcam_",pinnedWebcam,
                                             webcamEffects,MAX_EFFECT_OPTIONS);
+    if ( (numberOfWebcamEffects==0) && (pinnedWebcam) )
+    {
+      fprintf(stderr,"No webcam effect named %s , falling back to all of them\n",pinnedWebcam);
+      numberOfWebcamEffects = discoverEffects("shaders/webcam_*.frag","webcam_",0,
+                                              webcamEffects,MAX_EFFECT_OPTIONS);
+    }
   }
+    else
+  { fprintf(stderr,"Simple calm background , the webcam effect stays off\n"); }
 
   numberOfSleepyScenes = discoverEffects("shaders/sleepy_*.frag","sleepy_",pinnedSleepy,
                                          sleepyScenes,MAX_EFFECT_OPTIONS);
@@ -473,7 +488,11 @@ int main(int argc,const char ** argv)
 
     //Playtime over -> calm sleepy scene , no more spawns or sounds
     if ( (playMinutes>0) && (t>playMinutes*60.0f) && (!calmMode) )
-       { calmMode=1; fprintf(stderr,"Playtime is over , switching to the sleepy scene\n"); }
+    {
+      calmMode=1;
+      fprintf(stderr,"Playtime is over , switching to the sleepy scene\n");
+      runHookScript("scripts/on_sleep.sh");
+    }
     float sleepyFade = 0.0f;
     if ( (calmMode) && (sleepyFx) )
        { sleepyFade = (t-playMinutes*60.0f)/10.0f; if (sleepyFade>1.0f) { sleepyFade=1.0f; } }
