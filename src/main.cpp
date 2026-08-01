@@ -283,6 +283,7 @@ int main(int argc,const char ** argv)
   int playMinutes = 0;   /* 0 = unlimited */
   int volumePercent = 100;
   int listShaders = 0;
+  int speechEnabled = 0;  /* speech is opt in through --speech */
   const char * pinnedBackground = 0;  /* 0 = use every option and rotate */
   const char * pinnedWebcam = 0;
   const char * pinnedSleepy = 0;
@@ -291,23 +292,27 @@ int main(int argc,const char ** argv)
   for (i=1; i<argc; i++)
   {
     if (strcmp(argv[i],"--greek")==0)                        { greekMode=1; } else
+    if (strcmp(argv[i],"--speech")==0)                       { speechEnabled=1; } else
     if (strcmp(argv[i],"--list-shaders")==0)                 { listShaders=1; } else
     if ( (strcmp(argv[i],"--minutes")==0)    && (i+1<argc) ) { playMinutes = atoi(argv[++i]); } else
     if ( (strcmp(argv[i],"--volume")==0)     && (i+1<argc) ) { volumePercent = atoi(argv[++i]); } else
     if ( (strcmp(argv[i],"--background")==0) && (i+1<argc) ) { pinnedBackground = argv[++i]; } else
     if ( (strcmp(argv[i],"--webcam")==0)     && (i+1<argc) ) { pinnedWebcam = argv[++i]; } else
     if ( (strcmp(argv[i],"--sleepy")==0)     && (i+1<argc) ) { pinnedSleepy = argv[++i]; } else
-    if ( (strcmp(argv[i],"--voice")==0)      && (i+1<argc) ) { speechVoice = argv[++i]; } else
+    if ( (strcmp(argv[i],"--voice")==0)      && (i+1<argc) ) { speechVoice = argv[++i]; speechEnabled=1; } else
     if ( (strcmp(argv[i],"--help")==0) || (strcmp(argv[i],"-h")==0) )
     {
       printf("Usage : babykeysmash [options]\n"
-             "  --greek               Greek letters , spoken with Greek letter names\n"
+             "  --greek               Greek letters ( spoken with Greek names if --speech )\n"
+             "  --speech              speak letters and numbers aloud through espeak-ng\n"
+             "                        ( off by default , only sound effects are played )\n"
              "  --minutes N           after N minutes fade into the calm sleepy scene\n"
              "  --volume 0..100       volume of sound effects and speech\n"
              "  --background NAME     use only this background ( see --list-shaders )\n"
              "  --webcam NAME         use only this webcam effect\n"
              "  --sleepy NAME         use this end of playtime scene\n"
              "  --voice NAME          espeak-ng voice variant , e.g. f3 , m5 , whisper\n"
+             "                        ( implies --speech )\n"
              "  --list-shaders        show the available shader and voice options\n"
              "Effects not pinned rotate every 3 minutes , a parent can also switch\n"
              "them live with Ctrl+Shift+B ( background ) and Ctrl+Shift+W ( webcam )\n");
@@ -398,9 +403,15 @@ int main(int argc,const char ** argv)
   int haveAudio  = audio_start();
   soundbank_init("sounds");
   soundbank_setVolume(0.8f*volumePercent/100.0f);
-  speech_init();
-  speech_setVolume((float) volumePercent/100.0f);
-  speech_setVoice(speechVoice);
+  //Speech is opt in : without --speech every key just plays a sound effect
+  if (speechEnabled)
+  {
+    speech_init();
+    speech_setVolume((float) volumePercent/100.0f);
+    speech_setVoice(speechVoice);
+  }
+    else
+  { fprintf(stderr,"Speech is off , add --speech to hear letters and numbers spoken\n"); }
   if (playMinutes>0) { fprintf(stderr,"Playtime limited to %u minutes , then the sleepy scene comes up\n",playMinutes); }
 
   fprintf(stderr,"BabyKeySmash running at %ux%u , webcam=%u , microphone=%u \n",

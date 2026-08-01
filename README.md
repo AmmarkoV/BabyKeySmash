@@ -16,13 +16,15 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   monitor), created as an override-redirect GLX window with the keyboard and
   pointer grabbed — the window manager never sees any input, so there is
   nothing for a toddler to accidentally trigger.
-- **Keyboard**: letters pop as big colorful characters and are **spoken
-  aloud** through espeak-ng (if installed); digits **count** — pressing 3
-  pops three of the same animal and says "3". Every other key pops a random
-  sprite from `textures/`. With `--greek` the Greek alphabet pops and is
-  spoken with Greek letter names: Latin keys are mapped through the Greek
-  keyboard layout (a→Α, b→Β, g→Γ, ...) and native Greek layout keysyms are
-  handled directly.
+- **Keyboard**: letters pop as big colorful characters; digits **count** —
+  pressing 3 pops three of the same animal. Every other key pops a random
+  sprite from `textures/`. With `--greek` the Greek alphabet pops instead:
+  Latin keys are mapped through the Greek keyboard layout (a→Α, b→Β, g→Γ,
+  ...) and native Greek layout keysyms are handled directly.
+- **Spoken letters and numbers** with `--speech` (off by default): each
+  letter and count is said aloud through espeak-ng — Greek letter names
+  (άλφα, βήτα, ...) in `--greek` mode. Without it, keys just play sound
+  effects.
 - **Paired sounds**: when a popping sprite has a matching sound — texture
   `emoji_cow.png` and any `sounds/cow*.ogg` — that sound plays (the cow
   moos); otherwise a random clip is used.
@@ -51,13 +53,14 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   `tools/import_sounds.sh [sourceDirectory]` (ffmpeg converts mp3s to the
   expected ogg format, trimmed to 4 s); delete any ogg you dislike.
 - **Session flow**: `--volume 0..100` scales sounds and speech, `--voice f3`
-  picks an espeak-ng voice variant (`f1..f5`, `m1..m7`, `croak`, `whisper`);
+  picks an espeak-ng voice variant (`f1..f5`, `m1..m7`, `croak`, `whisper`,
+  implies `--speech`);
   `--minutes N` limits playtime — when time is up the screen crossfades into
   a calm night scene with a moon and twinkling stars, signalling sleep time.
   Every session appends a line to `~/.babykeysmash_stats`
   (date, duration, keystrokes, mouse moves, clicks).
 - Missing webcam, microphone, sounds or espeak-ng is fine — the corresponding
-  feature is simply disabled.
+  feature is simply disabled (speech is off unless `--speech` is passed).
 
 ## Parent controls
 
