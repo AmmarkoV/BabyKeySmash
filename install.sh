@@ -43,6 +43,9 @@ fi
 cp -r shaders textures sounds scripts /usr/share/babykeysmash/
 chmod 755 /usr/share/babykeysmash/scripts/*.sh
 
+cp babykeysmash.desktop /usr/share/applications/babykeysmash.desktop
+cp textures/emoji_teddy.png /usr/share/icons/babykeysmash.png
+
 TIME_STAMP=`date`
 touch babykeysmash_install.log
 echo "$TIME_STAMP" >> babykeysmash_install.log

@@ -20,6 +20,11 @@ int webcam_update();
 
 unsigned int webcam_texture();
 
+/* Motion detection : did something move in front of the camera since the
+   last call ? Outputs the motion centroid in normalized screen coordinates
+   ( 0..1 , matching the on-screen mirrored image ) , retval 1=motion */
+int webcam_getMotion(float * normalizedX,float * normalizedY);
+
 void webcam_stop();
 
 #ifdef __cplusplus

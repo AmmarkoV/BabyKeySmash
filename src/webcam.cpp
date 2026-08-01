@@ -27,6 +27,36 @@ static int active = 0;
 static GLuint camTexture = 0;
 static int texWidth = 0 , texHeight = 0;
 
+static int   motionDetected = 0;
+static float motionX = 0.5f , motionY = 0.5f;
+
+/* Cheap motion detection on a tiny grayscale copy , runs in the capture
+   thread . frame is already mirrored+flipped like the on-screen image */
+static void detectMotion(const cv::Mat & rgb)
+{
+  static cv::Mat previousSmall;
+  cv::Mat small,gray;
+  cv::resize(rgb,small,cv::Size(32,24));
+  cv::cvtColor(small,gray,cv::COLOR_RGB2GRAY);
+
+  if (!previousSmall.empty())
+  {
+    cv::Mat diff;
+    cv::absdiff(gray,previousSmall,diff);
+    cv::threshold(diff,diff,25,255,cv::THRESH_BINARY);
+    cv::Moments m = cv::moments(diff,1);
+    //at least ~4% of the cells must move to count , filters sensor noise
+    if (m.m00 > 32.0*24.0*0.04)
+    {
+      motionX = (float) (m.m10/m.m00) / 32.0f;
+      //texture row 0 is displayed at the bottom , flip to top-down coords
+      motionY = 1.0f - (float) (m.m01/m.m00) / 24.0f;
+      motionDetected = 1;
+    }
+  }
+  gray.copyTo(previousSmall);
+}
+
 static void * captureLoop(void * arg)
 {
   cv::VideoCapture * cap = (cv::VideoCapture *) arg;
@@ -41,6 +71,7 @@ static void * captureLoop(void * arg)
     pthread_mutex_lock(&frameLock);
     rgb.copyTo(sharedFrame);
     haveNewFrame = 1;
+    detectMotion(rgb);
     pthread_mutex_unlock(&frameLock);
   }
   cap->release();
@@ -108,6 +139,22 @@ int webcam_update()
 }
 
 unsigned int webcam_texture() { return camTexture; }
+
+int webcam_getMotion(float * normalizedX,float * normalizedY)
+{
+  if (!active) { return 0; }
+  int result = 0;
+  pthread_mutex_lock(&frameLock);
+  if (motionDetected)
+  {
+    *normalizedX = motionX;
+    *normalizedY = motionY;
+    motionDetected = 0;
+    result = 1;
+  }
+  pthread_mutex_unlock(&frameLock);
+  return result;
+}
 
 void webcam_stop()
 {

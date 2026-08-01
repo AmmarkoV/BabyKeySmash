@@ -24,8 +24,9 @@
 struct spriteTexture
 {
   GLuint tex;
-  float aspect; /* width / height */
-  int noTint;   /* emoji keep their original colors */
+  float aspect;  /* width / height */
+  int noTint;    /* emoji keep their original colors */
+  char name[64]; /* basename without extension and emoji_ prefix */
 };
 
 struct sprite
@@ -147,9 +148,17 @@ static int loadTexturesFromDirectory(const char * directory)
        { trailTexture = tex; }
         else
        {
-         textures[numberOfTextures].tex    = tex;
-         textures[numberOfTextures].aspect = aspect;
-         textures[numberOfTextures].noTint = ( files[i].find("emoji")!=cv::String::npos );
+         struct spriteTexture * st = &textures[numberOfTextures];
+         st->tex    = tex;
+         st->aspect = aspect;
+         st->noTint = ( files[i].find("emoji")!=cv::String::npos );
+         //short name : basename without directory / extension / emoji_ prefix
+         size_t slash = files[i].find_last_of('/');
+         cv::String base = (slash==cv::String::npos) ? files[i] : files[i].substr(slash+1);
+         size_t dot = base.find_last_of('.');
+         if (dot!=cv::String::npos) { base = base.substr(0,dot); }
+         if (base.find("emoji_")==0) { base = base.substr(6); }
+         snprintf(st->name,sizeof(st->name),"%s",base.c_str());
          numberOfTextures++;
        }
     fprintf(stderr,"Loaded texture %s \n",files[i].c_str());
@@ -229,15 +238,39 @@ static void spawnCommon(struct sprite * s,float x,float y,GLuint tex,float aspec
   randomBrightColor(&s->r,&s->g,&s->b);
 }
 
-void sprites_spawnRandomTexture(float x,float y)
+static struct sprite * spawnTexture(int pick,float x,float y)
 {
-  if (numberOfTextures==0) { sprites_spawnLetter('A'+(rand()%26)); return; }
   struct sprite * s = findFreeSprite();
-  if (s==0) { return; }
-  int pick = rand()%numberOfTextures;
+  if (s==0) { return 0; }
   spawnCommon(s,x,y,textures[pick].tex,textures[pick].aspect,
               randomFloat(0.18f,0.32f)*screenH,randomFloat(1.8f,2.8f));
   if (textures[pick].noTint) { s->r=1.0f; s->g=1.0f; s->b=1.0f; }
+  return s;
+}
+
+const char * sprites_spawnRandomTexture(float x,float y)
+{
+  if (numberOfTextures==0) { sprites_spawnLetter('A'+(rand()%26)); return 0; }
+  int pick = rand()%numberOfTextures;
+  if (spawnTexture(pick,x,y)==0) { return 0; }
+  return textures[pick].name;
+}
+
+const char * sprites_spawnCounted(int count)
+{
+  if (numberOfTextures==0) { return 0; }
+  int pick = rand()%numberOfTextures;
+  int i;
+  for (i=0; i<count; i++)
+    { if (spawnTexture(pick,-1,-1)==0) { break; } }
+  return textures[pick].name;
+}
+
+int sprites_latinToGreekIndex(char character)
+{
+  if ( (character>='a') && (character<='z') ) { return latinToGreek[character-'a']; }
+  if ( (character>='A') && (character<='Z') ) { return latinToGreek[character-'A']; }
+  return -1;
 }
 
 int sprites_loadGreek(const char * greekDirectory)
@@ -352,7 +385,7 @@ static float easeOutBack(float t)
   return 1.0f + c3*u*u*u + c1*u*u;
 }
 
-void sprites_updateAndDraw(float deltaSeconds)
+void sprites_updateAndDraw(float deltaSeconds,float mouseX,float mouseY)
 {
   glUseProgram(spriteProgram);
   glUniform2f(locScreen,(float) screenW,(float) screenH);
@@ -374,6 +407,28 @@ void sprites_updateAndDraw(float deltaSeconds)
     s->x += s->vx * deltaSeconds;
     s->y += s->vy * deltaSeconds;
     s->rot += s->vrot * deltaSeconds;
+
+    if (!s->isTrail)
+    {
+      //bounce off the screen edges like balloons
+      float halfW = s->targetHeight*s->aspect*0.5f;
+      float halfH = s->targetHeight*0.5f;
+      if ( (s->x<halfW)         && (s->vx<0) ) { s->vx = -s->vx*0.9f; }
+      if ( (s->x>screenW-halfW) && (s->vx>0) ) { s->vx = -s->vx*0.9f; }
+      if ( (s->y<halfH)         && (s->vy<0) ) { s->vy = -s->vy*0.9f; }
+      if ( (s->y>screenH-halfH) && (s->vy>0) ) { s->vy = -s->vy*0.9f; }
+
+      //let the cursor bat sprites away
+      float dx = s->x-mouseX , dy = s->y-mouseY;
+      float distance = sqrtf(dx*dx+dy*dy);
+      if ( (distance>1.0f) && (distance<halfH+halfW) )
+      {
+        float push = 900.0f*deltaSeconds;
+        s->vx += (dx/distance)*push;
+        s->vy += (dy/distance)*push;
+        s->vrot += ((rand()%2) ? 1.0f : -1.0f)*push*0.004f;
+      }
+    }
 
     float popPhase = s->age * 5.0f;
     float scale = (popPhase<1.0f) ? easeOutBack(popPhase) : 1.0f;

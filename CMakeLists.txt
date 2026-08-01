@@ -26,6 +26,7 @@ add_executable(babykeysmash
   src/webcam.cpp
   src/audio_alsa.c
   src/soundbank.c
+  src/speech.c
   ${RENDERER_DIR}/Rendering/ShaderPipeline/shader_loader.c
 )
 

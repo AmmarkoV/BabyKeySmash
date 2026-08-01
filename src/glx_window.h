@@ -35,6 +35,10 @@ int babywin_processEvents();
 int babywin_swap();
 int babywin_close();
 
+/* Human readable description of what made babywin_processEvents return 0
+   ( "Escape held for 3 seconds" , "Ctrl+Shift+Q" , "signal" .. ) */
+const char * babywin_exitReason();
+
 #ifdef __cplusplus
 }
 #endif

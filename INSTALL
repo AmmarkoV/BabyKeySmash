@@ -4,6 +4,10 @@ required packages with :
 
 sudo apt install cmake g++ libx11-dev libglew-dev libopencv-dev libasound2-dev libvorbis-dev
 
+Optionally , for spoken letters and numbers :
+
+sudo apt install espeak-ng
+
 The optional asset regeneration tools ( tools/make_textures.py ,
 tools/import_sounds.sh ) additionally use :
 
@@ -33,7 +37,12 @@ This installs the babykeysmash binary to /usr/bin and the assets
 after that you can start it from anywhere with :
 
 babykeysmash
-babykeysmash --greek
+babykeysmash --greek                  ( Greek letters and speech )
+babykeysmash --minutes 20             ( sleepy scene after 20 minutes )
+babykeysmash --volume 50              ( half volume for sounds and speech )
+
+The installation also adds a BabyKeySmash entry with a teddy bear icon to
+the applications menu .
 
 
 --------------- Uninstallation of current version ---------------

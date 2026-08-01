@@ -16,11 +16,25 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   monitor), created as an override-redirect GLX window with the keyboard and
   pointer grabbed — the window manager never sees any input, so there is
   nothing for a toddler to accidentally trigger.
-- **Keyboard**: letters and digits pop as big colorful characters; every other
-  key pops a random sprite from `textures/`. With `--greek` the Greek alphabet
-  pops instead: Latin keys are mapped through the Greek keyboard layout
-  (a→Α, b→Β, g→Γ, ...) and native Greek layout keysyms are handled directly.
-- **Mouse**: movement leaves a soft glowing trail, clicks make sprite bursts.
+- **Keyboard**: letters pop as big colorful characters and are **spoken
+  aloud** through espeak-ng (if installed); digits **count** — pressing 3
+  pops three of the same animal and says "3". Every other key pops a random
+  sprite from `textures/`. With `--greek` the Greek alphabet pops and is
+  spoken with Greek letter names: Latin keys are mapped through the Greek
+  keyboard layout (a→Α, b→Β, g→Γ, ...) and native Greek layout keysyms are
+  handled directly.
+- **Paired sounds**: when a popping sprite has a matching sound — texture
+  `emoji_cow.png` and any `sounds/cow*.ogg` — that sound plays (the cow
+  moos); otherwise a random clip is used.
+- **Mouse**: movement leaves a soft glowing trail, clicks make sprite bursts,
+  and the cursor can bat floating sprites around; sprites bounce off the
+  screen edges.
+- **Motion magic**: waving in front of the webcam sprinkles sparkles where
+  the movement happened.
+- **Rotating effects**: the background (plasma, sea) and webcam effect
+  (edge-glow, kaleidoscope) rotate every 3 minutes with a crossfade; any
+  ShaderToy-style `.frag` dropped into the rotation in `src/main.cpp` joins
+  the cycle.
 - **Microphone** (ALSA): a capture thread computes an FFT and fills a texture
   in the ShaderToy audio layout (row 0 = spectrum, row 1 = waveform); the
   background plasma pulses with sound and a waveform ring dances around the
@@ -34,8 +48,13 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   smashing cannot spam audio. Populate/refresh the bank with
   `tools/import_sounds.sh [sourceDirectory]` (ffmpeg converts mp3s to the
   expected ogg format, trimmed to 4 s); delete any ogg you dislike.
-- Missing webcam, microphone or sounds is fine — the corresponding feature is
-  simply disabled.
+- **Session flow**: `--volume 0..100` scales sounds and speech;
+  `--minutes N` limits playtime — when time is up the screen crossfades into
+  a calm night scene with a moon and twinkling stars, signalling sleep time.
+  Every session appends a line to `~/.babykeysmash_stats`
+  (date, duration, keystrokes, mouse moves, clicks).
+- Missing webcam, microphone, sounds or espeak-ng is fine — the corresponding
+  feature is simply disabled.
 
 ## Quitting (parents only)
 

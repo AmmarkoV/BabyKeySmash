@@ -14,5 +14,8 @@ else
   echo "No BabyKeySmash binary detected"
 fi
 
+sudo rm -f /usr/share/applications/babykeysmash.desktop
+sudo rm -f /usr/share/icons/babykeysmash.png
+
 echo "Done"
 exit 0

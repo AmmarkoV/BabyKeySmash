@@ -15,8 +15,17 @@ extern "C" {
    retval 1=Success ( even with zero textures , letters still work ) */
 int sprites_init(const char * textureDirectory,int screenWidth,int screenHeight);
 
-/* A random texture pops at x,y ( pixels ) , pass -1,-1 for a random spot */
-void sprites_spawnRandomTexture(float x,float y);
+/* A random texture pops at x,y ( pixels ) , pass -1,-1 for a random spot .
+   retval = short name of the spawned texture ( e.g. "cow" for
+   emoji_cow.png , usable with soundbank_playNamed ) or 0 */
+const char * sprites_spawnRandomTexture(float x,float y);
+
+/* count copies of one random texture pop together ( pressing digit 3 pops
+   three ducks ) , retval = short name of the texture like above */
+const char * sprites_spawnCounted(int count);
+
+/* Greek keyboard layout mapping , 'A'..'Z' -> alphabet index 0..23 or -1 */
+int sprites_latinToGreekIndex(char character);
 
 /* Load the pre-baked Greek alphabet ( see tools/make_textures.py ) so that
    letter keys pop Greek letters , retval = number of letters loaded */
@@ -34,7 +43,8 @@ void sprites_spawnGreek(int alphabetIndex);
 /* Small short-lived puff following the mouse */
 void sprites_spawnTrail(float x,float y);
 
-void sprites_updateAndDraw(float deltaSeconds);
+/* mouse position lets sprites be pushed around by the cursor */
+void sprites_updateAndDraw(float deltaSeconds,float mouseX,float mouseY);
 
 void sprites_close();
 

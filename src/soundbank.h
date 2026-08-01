@@ -18,9 +18,17 @@ extern "C" {
    retval = number of sounds loaded , 0 = sound disabled ( app keeps working ) */
 int soundbank_init(const char * directory);
 
+/* volume 0.0 .. 1.0 */
+void soundbank_setVolume(float volume);
+
 /* Trigger a random clip ; silently dropped when both voices are busy or the
    last trigger was less than the cooldown ago */
 void soundbank_playRandom();
+
+/* Trigger a random clip whose filename starts with name ( e.g. name "cow"
+   matches cow.ogg / cow1.ogg .. ) , retval 1=matched 0=no such clip .
+   This pairs textures with sounds : emoji_cow.png -> cow*.ogg */
+int soundbank_playNamed(const char * name);
 
 void soundbank_close();
 

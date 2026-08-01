@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#include <ctype.h>
 #include <time.h>
 #include <glob.h>
 #include <pthread.h>
@@ -22,12 +24,13 @@
 #define SOUNDBANK_SAMPLE_RATE 44100
 #define SOUNDBANK_CHANNELS 2
 #define SOUNDBANK_CHUNK_FRAMES 512
-#define SOUNDBANK_VOLUME 0.8f
+static float soundbankVolume = 0.8f;
 
 struct soundClip
 {
   short * samples;             /* interleaved stereo */
   unsigned int frames;
+  char name[64];               /* lowercase basename without extension */
 };
 
 struct voice
@@ -115,7 +118,7 @@ static void * playbackLoop(void * arg)
       const short * src = clip->samples + voices[v].position*SOUNDBANK_CHANNELS;
       unsigned int s;
       for (s=0; s<todo*SOUNDBANK_CHANNELS; s++)
-        { mix[s] += (int) (src[s]*SOUNDBANK_VOLUME); }
+        { mix[s] += (int) (src[s]*soundbankVolume); }
       voices[v].position += todo;
       if (voices[v].position>=clip->frames) { voices[v].active=0; }
     }
@@ -155,7 +158,18 @@ int soundbank_init(const char * directory)
   for (i=0; i<files.gl_pathc; i++)
   {
     if (numberOfSounds>=SOUNDBANK_MAX_SOUNDS) { break; }
-    if (loadOgg(files.gl_pathv[i],&sounds[numberOfSounds])) { numberOfSounds++; }
+    if (loadOgg(files.gl_pathv[i],&sounds[numberOfSounds]))
+    {
+      //remember the lowercase basename ( without .ogg ) for soundbank_playNamed
+      const char * base = strrchr(files.gl_pathv[i],'/');
+      base = (base) ? base+1 : files.gl_pathv[i];
+      struct soundClip * clip = &sounds[numberOfSounds];
+      unsigned int c;
+      for (c=0; (c<sizeof(clip->name)-1) && (base[c]!=0) && (base[c]!='.'); c++)
+        { clip->name[c] = tolower(base[c]); }
+      clip->name[c]=0;
+      numberOfSounds++;
+    }
   }
   globfree(&files);
 
@@ -194,10 +208,8 @@ int soundbank_init(const char * directory)
   return numberOfSounds;
 }
 
-void soundbank_playRandom()
+static void triggerSound(int soundIndex)
 {
-  if (!active) { return; }
-
   double now = getTimeSeconds();
 
   pthread_mutex_lock(&voiceLock);
@@ -208,7 +220,7 @@ void soundbank_playRandom()
     {
       if (!voices[v].active)
       {
-        voices[v].soundIndex = rand()%numberOfSounds;
+        voices[v].soundIndex = soundIndex;
         voices[v].position = 0;
         voices[v].active = 1;
         lastTriggerTime = now;
@@ -217,6 +229,36 @@ void soundbank_playRandom()
     }
   }
   pthread_mutex_unlock(&voiceLock);
+}
+
+void soundbank_setVolume(float volume)
+{
+  soundbankVolume = volume;
+}
+
+void soundbank_playRandom()
+{
+  if (!active) { return; }
+  triggerSound(rand()%numberOfSounds);
+}
+
+int soundbank_playNamed(const char * name)
+{
+  if ( (!active) || (name==0) || (name[0]==0) ) { return 0; }
+
+  unsigned int nameLength = strlen(name);
+  int matches[SOUNDBANK_MAX_SOUNDS];
+  int numberOfMatches = 0;
+  int i;
+  for (i=0; i<numberOfSounds; i++)
+  {
+    if (strncasecmp(sounds[i].name,name,nameLength)==0)
+      { matches[numberOfMatches++] = i; }
+  }
+  if (numberOfMatches==0) { return 0; }
+
+  triggerSound(matches[rand()%numberOfMatches]);
+  return 1;
 }
 
 void soundbank_close()

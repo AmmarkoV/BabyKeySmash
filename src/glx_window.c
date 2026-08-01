@@ -41,6 +41,7 @@ static struct babyWindowCallbacks * cb = 0;
 static double escHeldSince = 0.0;      /* 0.0 = escape not held */
 static double lastScreenSaverPoke = 0.0;
 static double lastRaise = 0.0;
+static const char * exitReason = "still running";
 static volatile int signalQuitRequested = 0;
 
 static double getTimeSeconds()
@@ -287,7 +288,7 @@ int babywin_processEvents()
           //Backup parent combo : Ctrl+Shift+Q
           if ( ( (keysym==XK_q) || (keysym==XK_Q) ) &&
                (event.xkey.state & ControlMask) && (event.xkey.state & ShiftMask) )
-                 { return 0; }
+                 { exitReason = "Ctrl+Shift+Q pressed"; return 0; }
           if (cb && cb->onKey) { cb->onKey(keysym); }
         }
         break;
@@ -315,10 +316,18 @@ int babywin_processEvents()
   double now = getTimeSeconds();
 
   if ( (escHeldSince!=0.0) && (now-escHeldSince > ESCAPE_HOLD_SECONDS_TO_QUIT) )
-    { fprintf(stderr,"Escape held for %0.1f seconds , quitting..\n",ESCAPE_HOLD_SECONDS_TO_QUIT); return 0; }
+    {
+      fprintf(stderr,"Escape held for %0.1f seconds , quitting..\n",ESCAPE_HOLD_SECONDS_TO_QUIT);
+      exitReason = "Escape button held for 3 seconds";
+      return 0;
+    }
 
   if (signalQuitRequested)
-    { fprintf(stderr,"Quit requested by signal..\n"); return 0; }
+    {
+      fprintf(stderr,"Quit requested by signal..\n");
+      exitReason = "terminated by signal ( SIGINT / SIGTERM )";
+      return 0;
+    }
 
   if (now-lastScreenSaverPoke > 50.0)
   {
@@ -335,6 +344,11 @@ int babywin_processEvents()
   }
 
   return 1;
+}
+
+const char * babywin_exitReason()
+{
+  return exitReason;
 }
 
 int babywin_swap()
