@@ -47,6 +47,21 @@ static GLuint trailTexture = 0;
 
 static struct spriteTexture letterCache[128];
 
+#define GREEK_LETTERS 24
+static struct spriteTexture greekLetters[GREEK_LETTERS];
+static int greekLoaded = 0;
+
+/* Greek keyboard layout : which Greek letter ( alphabet index 0=alpha ..
+   23=omega ) each Latin key a-z produces , -1 = no Greek letter on that key */
+static const int latinToGreek[26] =
+{
+  /*a*/ 0,  /*b*/ 1,  /*c*/ 22, /*d*/ 3,  /*e*/ 4,  /*f*/ 20,
+  /*g*/ 2,  /*h*/ 6,  /*i*/ 8,  /*j*/ 13, /*k*/ 9,  /*l*/ 10,
+  /*m*/ 11, /*n*/ 12, /*o*/ 14, /*p*/ 15, /*q*/ -1, /*r*/ 16,
+  /*s*/ 17, /*t*/ 18, /*u*/ 7,  /*v*/ 23, /*w*/ 17, /*x*/ 21,
+  /*y*/ 19, /*z*/ 5
+};
+
 static struct sprite sprites[MAX_SPRITES];
 
 static int screenW = 0 , screenH = 0;
@@ -222,8 +237,51 @@ void sprites_spawnRandomTexture(float x,float y)
               randomFloat(0.18f,0.32f)*screenH,randomFloat(1.8f,2.8f));
 }
 
+int sprites_loadGreek(const char * greekDirectory)
+{
+  //Greek glyphs can not be rasterized at runtime ( cv::putText only covers
+  //ASCII ) so they are pre-baked by tools/make_textures.py in alphabet order
+  std::vector<cv::String> files;
+  cv::glob(cv::String(greekDirectory)+"/*.png",files,false);
+  if (files.size()<GREEK_LETTERS)
+  {
+    fprintf(stderr,"Found %u/%u Greek letters in %s , run tools/make_textures.py\n",
+            (unsigned int) files.size(),GREEK_LETTERS,greekDirectory);
+    return 0;
+  }
+
+  int i;
+  for (i=0; i<GREEK_LETTERS; i++)
+  {
+    cv::Mat img = cv::imread(files[i],cv::IMREAD_UNCHANGED);
+    if ( (img.empty()) || (img.channels()!=4) )
+       { fprintf(stderr,"Could not read Greek letter %s \n",files[i].c_str()); return 0; }
+    cv::Mat rgba;
+    cv::cvtColor(img,rgba,cv::COLOR_BGRA2RGBA);
+    cv::flip(rgba,rgba,0);
+    greekLetters[i].tex    = uploadRGBAMat(rgba);
+    greekLetters[i].aspect = (float) rgba.cols / (float) rgba.rows;
+  }
+  greekLoaded = 1;
+  fprintf(stderr,"Loaded %u Greek letters from %s \n",GREEK_LETTERS,greekDirectory);
+  return GREEK_LETTERS;
+}
+
+void sprites_spawnGreek(int alphabetIndex)
+{
+  if ( (!greekLoaded) || (alphabetIndex<0) || (alphabetIndex>=GREEK_LETTERS) )
+     { sprites_spawnRandomTexture(-1,-1); return; }
+  struct sprite * s = findFreeSprite();
+  if (s==0) { return; }
+  spawnCommon(s,-1,-1,greekLetters[alphabetIndex].tex,greekLetters[alphabetIndex].aspect,
+              randomFloat(0.2f,0.35f)*screenH,randomFloat(1.8f,2.8f));
+}
+
 void sprites_spawnLetter(char character)
 {
+  if ( (greekLoaded) && (character>='A') && (character<='Z') )
+     { sprites_spawnGreek(latinToGreek[character-'A']); return; }
+
   struct sprite * s = findFreeSprite();
   if (s==0) { return; }
   float aspect=1.0f;
@@ -340,6 +398,7 @@ void sprites_close()
   int i;
   for (i=0; i<numberOfTextures; i++) { glDeleteTextures(1,&textures[i].tex); }
   for (i=0; i<128; i++) { if (letterCache[i].tex) { glDeleteTextures(1,&letterCache[i].tex); } }
+  if (greekLoaded) { for (i=0; i<GREEK_LETTERS; i++) { glDeleteTextures(1,&greekLetters[i].tex); } greekLoaded=0; }
   if (trailTexture) { glDeleteTextures(1,&trailTexture); }
   if (spriteProgram) { glDeleteProgram(spriteProgram); }
   numberOfTextures=0;

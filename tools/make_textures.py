@@ -8,10 +8,23 @@ Requires : python3-pil , python3-numpy"""
 import os
 import math
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 SIZE = 256
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "textures")
+
+FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+# Uppercase Greek alphabet in order , file index must match the
+# latinToGreek / keysym mapping tables in src/sprites.cpp and src/main.cpp
+GREEK = [
+    ("alpha", "Α"), ("beta", "Β"), ("gamma", "Γ"), ("delta", "Δ"),
+    ("epsilon", "Ε"), ("zeta", "Ζ"), ("eta", "Η"), ("theta", "Θ"),
+    ("iota", "Ι"), ("kappa", "Κ"), ("lambda", "Λ"), ("mu", "Μ"),
+    ("nu", "Ν"), ("xi", "Ξ"), ("omicron", "Ο"), ("pi", "Π"),
+    ("rho", "Ρ"), ("sigma", "Σ"), ("tau", "Τ"), ("upsilon", "Υ"),
+    ("phi", "Φ"), ("chi", "Χ"), ("psi", "Ψ"), ("omega", "Ω"),
+]
 
 
 def canvas():
@@ -92,9 +105,30 @@ def trail_dot():
     save("trail_dot.png", Image.fromarray(arr, "RGBA"))
 
 
+def greek_letters():
+    # cv::putText ( Hershey fonts ) can not render Greek glyphs , so the
+    # Greek letters used with --greek are pre-baked here with a TTF font ,
+    # white with a dark outline so they get tinted at draw time like the
+    # Latin letters
+    font = ImageFont.truetype(FONT, 180)
+    stroke = 10
+    for i, (name, glyph) in enumerate(GREEK):
+        probe = ImageDraw.Draw(Image.new("RGBA", (4, 4)))
+        left, top, right, bottom = probe.textbbox((0, 0), glyph, font=font, stroke_width=stroke)
+        pad = 20
+        img = Image.new("RGBA", (right - left + 2 * pad, bottom - top + 2 * pad), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        d.text((pad - left, pad - top), glyph, font=font,
+               fill=(255, 255, 255, 255), stroke_width=stroke, stroke_fill=(40, 40, 40, 255))
+        os.makedirs(os.path.join(OUT, "greek"), exist_ok=True)
+        img.save(os.path.join(OUT, "greek", "greek_%02u_%s.png" % (i, name)))
+    print("wrote", len(GREEK), "greek letters to", os.path.join(OUT, "greek"))
+
+
 if __name__ == "__main__":
     balloon()
     star()
     heart()
     dino()
     trail_dot()
+    greek_letters()

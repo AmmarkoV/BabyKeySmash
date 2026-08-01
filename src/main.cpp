@@ -14,6 +14,7 @@
 #include <GL/glew.h>
 #include <GL/gl.h>
 
+#define XK_GREEK
 #include <X11/keysym.h>
 
 #include "glx_window.h"
@@ -71,8 +72,24 @@ static double getTimeSeconds()
   return (double) ts.tv_sec + (double) ts.tv_nsec / 1000000000.0;
 }
 
+/* Keysym -> Greek alphabet index ( 0=alpha .. 23=omega ) for a Greek
+   keyboard layout , -1 = not a Greek letter . The keysym table has a gap at
+   0x7d3 in the capitals and the final sigma at 0x7f3 in the smalls */
+static int greekKeysymToIndex(unsigned long keysym)
+{
+  if ( (keysym>=XK_Greek_ALPHA) && (keysym<=XK_Greek_SIGMA) ) { return keysym-XK_Greek_ALPHA; }
+  if ( (keysym>=XK_Greek_TAU)   && (keysym<=XK_Greek_OMEGA) ) { return 18 + (keysym-XK_Greek_TAU); }
+  if ( (keysym>=XK_Greek_alpha) && (keysym<=XK_Greek_sigma) ) { return keysym-XK_Greek_alpha; }
+  if (keysym==XK_Greek_finalsmallsigma)                       { return 17; }
+  if ( (keysym>=XK_Greek_tau)   && (keysym<=XK_Greek_omega) ) { return 18 + (keysym-XK_Greek_tau); }
+  return -1;
+}
+
 static void onKey(unsigned long keysym)
 {
+  int greekIndex = greekKeysymToIndex(keysym);
+  if (greekIndex>=0)
+       { sprites_spawnGreek(greekIndex); } else
   if ( (keysym>=XK_a && keysym<=XK_z) )
        { rememberTypedLetter('a' + (keysym-XK_a)); sprites_spawnLetter('A' + (keysym-XK_a)); } else
   if ( (keysym>=XK_A && keysym<=XK_Z) )
@@ -109,6 +126,11 @@ int main(int argc,const char ** argv)
 {
   srand(time(0));
 
+  int greekMode = 0;
+  int i;
+  for (i=1; i<argc; i++)
+    { if (strcmp(argv[i],"--greek")==0) { greekMode=1; } }
+
   //Allow launching from anywhere : fall back to the source tree for assets
   if (access("shaders/background.frag",R_OK)!=0)
   {
@@ -140,6 +162,7 @@ int main(int argc,const char ** argv)
   if (backgroundFx==0) { fprintf(stderr,"Background shader is required , exiting\n"); runHookScript("scripts/on_exit.sh"); return 1; }
 
   sprites_init("textures",width,height);
+  if (greekMode) { sprites_loadGreek("textures/greek"); }
 
   int haveWebcam = webcam_start(0);
   int haveAudio  = audio_start();
