@@ -13,6 +13,8 @@ find_package(X11 REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs videoio)
 find_package(ALSA REQUIRED)
 find_package(Threads REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(VORBISFILE REQUIRED vorbisfile)
 
 set(RENDERER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/opengl_depth_and_color_renderer/src/Library)
 
@@ -23,6 +25,7 @@ add_executable(babykeysmash
   src/sprites.cpp
   src/webcam.cpp
   src/audio_alsa.c
+  src/soundbank.c
   ${RENDERER_DIR}/Rendering/ShaderPipeline/shader_loader.c
 )
 
@@ -39,6 +42,7 @@ target_link_libraries(babykeysmash
   ${X11_LIBRARIES}
   ${OpenCV_LIBS}
   ALSA::ALSA
+  ${VORBISFILE_LIBRARIES}
   Threads::Threads
   m
 )

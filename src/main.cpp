@@ -22,6 +22,7 @@
 #include "sprites.h"
 #include "webcam.h"
 #include "audio_alsa.h"
+#include "soundbank.h"
 
 static float mouseX = 0.0f , mouseY = 0.0f;
 static float lastTrailX = -1000.0f , lastTrailY = -1000.0f;
@@ -92,6 +93,7 @@ static int greekKeysymToIndex(unsigned long keysym)
 static void onKey(unsigned long keysym)
 {
   keysHandled++;
+  soundbank_playRandom();
   int greekIndex = greekKeysymToIndex(keysym);
   if (greekIndex>=0)
        { sprites_spawnGreek(greekIndex); } else
@@ -173,6 +175,7 @@ int main(int argc,const char ** argv)
 
   int haveWebcam = webcam_start(0);
   int haveAudio  = audio_start();
+  soundbank_init("sounds");
 
   fprintf(stderr,"BabyKeySmash running at %ux%u , webcam=%u , microphone=%u \n",
           width,height,haveWebcam,haveAudio);
@@ -229,6 +232,7 @@ int main(int argc,const char ** argv)
           keysHandled+mouseMovesHandled+clicksHandled);
   webcam_stop();
   audio_stop();
+  soundbank_close();
   sprites_close();
   shadertoy_unload(backgroundFx);
   shadertoy_unload(webcamFx);

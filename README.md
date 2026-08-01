@@ -27,8 +27,15 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   mouse.
 - **Webcam** (OpenCV): a mirrored live feed is stylized by a posterize +
   rainbow edge-glow shader and blended over the background.
-- Missing webcam or microphone is fine — the corresponding effect is simply
-  disabled.
+- **Sounds**: every keypress triggers a random clip from `sounds/*.ogg`
+  (decoded with libvorbisfile at startup, mixed in-process through ALSA —
+  ogg keeps the repository ~15x smaller than wav). At most 2 clips play
+  simultaneously and triggers are rate limited (0.35 s cooldown), so key
+  smashing cannot spam audio. Populate/refresh the bank with
+  `tools/import_sounds.sh [sourceDirectory]` (ffmpeg converts mp3s to the
+  expected ogg format, trimmed to 4 s); delete any ogg you dislike.
+- Missing webcam, microphone or sounds is fine — the corresponding feature is
+  simply disabled.
 
 ## Quitting (parents only)
 
@@ -43,10 +50,10 @@ handled by the kernel/X server and cannot be blocked by an X client.
 
 ## Building
 
-Dependencies (Debian/Ubuntu package names):
+Dependencies (Ubuntu 22.04 / 24.04 package names):
 
 ```
-sudo apt install cmake g++ libx11-dev libglew-dev libopencv-dev libasound2-dev
+sudo apt install cmake g++ libx11-dev libglew-dev libopencv-dev libasound2-dev libvorbis-dev
 ```
 
 Then:
