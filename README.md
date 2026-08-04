@@ -105,7 +105,8 @@ cmake --build build -j$(nproc)
 
 Or simply `./run.sh` (builds if needed, forwards arguments like `--greek`).
 To install system-wide — binary to `/usr/bin/babykeysmash`, assets to
-`/usr/share/babykeysmash` — run `sudo ./install.sh`; remove everything again
+`/usr/share/babykeysmash` — run `./install.sh` (it installs the dependencies,
+builds as your user and asks for sudo only when copying); remove everything again
 with `./uninstall.sh`. See [INSTALL](INSTALL) for details.
 
 The executable can be started from any directory — if `shaders/` is not found

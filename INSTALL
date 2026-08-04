@@ -2,7 +2,7 @@
 BabyKeySmash targets Ubuntu 22.04 / 24.04+ systems , you can get the
 required packages with :
 
-sudo apt install cmake g++ libx11-dev libglew-dev libopencv-dev libasound2-dev libvorbis-dev
+sudo apt install cmake g++ pkg-config libx11-dev libglew-dev libopencv-dev libasound2-dev libvorbis-dev
 
 Optionally , for spoken letters and numbers ( the --speech option ) :
 
@@ -26,11 +26,14 @@ You can then try the application without installing anything using
 
 
 --------------- Installation of current version ---------------
-If you want to install the app ( it compiles automatically ) , run
+If you want to install the app ( it apt-get installs the dependencies and
+compiles automatically ) , run
 
-sudo ./install.sh
+./install.sh
 
-your password is required..
+without sudo , your password is asked when the dependencies are installed and
+when the files are copied to the system ( running the whole installer as root
+would leave a root owned build/ directory behind ) ..
 
 This installs the babykeysmash binary to /usr/bin and the assets
 ( shaders , textures , sounds , hook scripts ) to /usr/share/babykeysmash ,
