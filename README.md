@@ -30,7 +30,9 @@ See [PLAN.md](PLAN.md) for the design decisions behind the implementation.
   moos); otherwise a random clip is used.
 - **Mouse**: movement leaves a soft glowing trail, clicks make sprite bursts,
   and the cursor can bat floating sprites around; sprites bounce off the
-  screen edges.
+  screen edges. After 5 seconds without mouse movement the cursor glides back
+  to the center of the screen(s), drawing its trail, so little kids can find
+  it again.
 - **Motion magic**: waving in front of the webcam sprinkles sparkles where
   the movement happened.
 - **Calm mode**: `--simplebg` replaces the animated visuals with a quiet

@@ -28,6 +28,10 @@
 typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
 
 #define ESCAPE_HOLD_SECONDS_TO_QUIT 3.0
+/* The pointer is invisible , kids find it again by its trail , so after this
+   long without motion it glides back to the middle of the screen(s) */
+#define MOUSE_IDLE_SECONDS_TO_CENTER 5.0
+#define MOUSE_GLIDE_SECONDS 1.2
 
 static Display   *display = 0;
 static Window     win = 0;
@@ -41,6 +45,11 @@ static struct babyWindowCallbacks * cb = 0;
 static double escHeldSince = 0.0;      /* 0.0 = escape not held */
 static double lastScreenSaverPoke = 0.0;
 static double lastRaise = 0.0;
+static double lastPointerMotion = 0.0;
+static int    pointerCentered = 0;
+static double glideStartedAt = 0.0;    /* 0.0 = not gliding */
+static int    glideFromX = 0 , glideFromY = 0;
+static int    lastWarpX = -1 , lastWarpY = -1;
 static const char * exitReason = "still running";
 static volatile int signalQuitRequested = 0;
 
@@ -265,8 +274,37 @@ int babywin_open(struct babyWindowCallbacks * callbacks)
 int babywin_width()  { return winWidth;  }
 int babywin_height() { return winHeight; }
 
+/* After a while without motion the pointer glides back to the center one
+   frame at a time , each warp comes back as a MotionNotify so the usual
+   trail sprites draw its path */
+static void glidePointerHome()
+{
+  double now = getTimeSeconds();
+  if (lastPointerMotion==0.0) { lastPointerMotion = now; }
+  if (pointerCentered) { return; }
+  if (glideStartedAt==0.0)
+  {
+    if (now-lastPointerMotion <= MOUSE_IDLE_SECONDS_TO_CENTER) { return; }
+    Window root,child;
+    int rootX,rootY;
+    unsigned int mask;
+    if (!XQueryPointer(display,win,&root,&child,&rootX,&rootY,&glideFromX,&glideFromY,&mask)) { return; }
+    glideStartedAt = now;
+  }
+  double p = (now-glideStartedAt) / MOUSE_GLIDE_SECONDS;
+  if (p>=1.0) { p=1.0; pointerCentered=1; glideStartedAt=0.0; }
+  p = p*p*(3.0-2.0*p); //smoothstep : eases off from where it was and into the center
+  lastWarpX = glideFromX + (int) ((winWidth/2 -glideFromX)*p);
+  lastWarpY = glideFromY + (int) ((winHeight/2-glideFromY)*p);
+  XWarpPointer(display,None,win,0,0,0,0,lastWarpX,lastWarpY);
+  //Round trip so the warp's MotionNotify is already queued for this frame's event loop
+  XSync(display,False);
+}
+
 int babywin_processEvents()
 {
+  glidePointerHome();
+
   XEvent event;
   while (XPending(display))
   {
@@ -300,6 +338,9 @@ int babywin_processEvents()
         break;
       }
       case MotionNotify:
+        //Anything that is not our own glide warp is the kid taking over
+        if ( (event.xmotion.x!=lastWarpX) || (event.xmotion.y!=lastWarpY) )
+          { lastPointerMotion = getTimeSeconds(); pointerCentered = 0; glideStartedAt = 0.0; }
         if (cb && cb->onMouseMove) { cb->onMouseMove(event.xmotion.x,event.xmotion.y); }
         break;
       case ButtonRelease:
